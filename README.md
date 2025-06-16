@@ -24,7 +24,7 @@ The only external dependency you need to install yourself is **NCBI BLAST+**. Th
 
 Other dependencies installed with HCR-prober:         
       `  'biopython>=1.79', 'pandas>=1.3.0', 'openpyxl>=3.0.0',
-        'numpy>=1.20.0', 'matplotlib>=3.3.0', 'PyYAML>=5.4.0', 'loguru>=0.5.3',`
+        'numpy>=1.20.0', 'matplotlib>=3.3.0', 'PyYAML>=5.4.0', 'loguru>=0.5.3'`
 
 **On Linux (Ubuntu/Debian):**
 ```bash
