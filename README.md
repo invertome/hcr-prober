@@ -63,7 +63,7 @@ You can install HCR-prober from the provided `.zip` file or by cloning a Git rep
 
 1.  Clone the repository to your machine.
     ```bash
-    git clone https://your-git-repository-url/hcr-prober.git
+    git clone https://github.com/invertome/hcr-prober.git
     ```
 2.  Navigate into the repository directory.
     ```bash
