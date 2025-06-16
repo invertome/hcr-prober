@@ -1,4 +1,4 @@
-# HCR-prober v1.3.9: A Professional Toolkit for HCR Probe Design
+# HCR-prober v1.4.0: A Professional Toolkit for HCR Probe Design
 
 ## Overview
 
