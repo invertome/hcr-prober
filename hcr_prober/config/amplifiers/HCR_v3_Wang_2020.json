@@ -1,0 +1,5 @@
+{
+  "B1": { "up": "GAGGAGGGCAGCAAACGG", "dn": "GAAGAGTCTTCCTTTACG", "upspc": "aa", "dnspc": "ta" },
+  "B2": { "up": "CCTCGTAAATCCTCATCA", "dn": "ATCATCCAGTAAACCGCC", "upspc": "aa", "dnspc": "aa" },
+  "B3": { "up": "GTCCCTGCCTCTATATCT", "dn": "CCACTCAACTTTAACCCG", "upspc": "tt", "dnspc": "tt" }
+}
