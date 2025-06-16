@@ -23,8 +23,8 @@ This toolkit is designed for molecular biologists and bioinformaticians who need
 The only external dependency you need to install yourself is **NCBI BLAST+**. The probe design pipeline relies on `makeblastdb` and `blastn` to perform specificity screening. This must be installed and available in your system's PATH.
 
 Other dependencies installed with HCR-prober:         
-        'biopython>=1.79', 'pandas>=1.3.0', 'openpyxl>=3.0.0',
-        'numpy>=1.20.0', 'matplotlib>=3.3.0', 'PyYAML>=5.4.0', 'loguru>=0.5.3',
+      `  'biopython>=1.79', 'pandas>=1.3.0', 'openpyxl>=3.0.0',
+        'numpy>=1.20.0', 'matplotlib>=3.3.0', 'PyYAML>=5.4.0', 'loguru>=0.5.3',`
 
 **On Linux (Ubuntu/Debian):**
 ```bash
