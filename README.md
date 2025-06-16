@@ -48,11 +48,11 @@ You can install HCR-prober from the provided `.zip` file or by cloning a Git rep
 
 1.  Unzip the project file provided.
     ```bash
-    unzip HCR-prober-project-v1.3.9.zip
+    unzip HCR-prober-project-v1.4.0.zip
     ```
 2.  Navigate into the newly created directory.
     ```bash
-    cd HCR-prober-project-v1.3.9
+    cd HCR-prober-project-v1.4.0
     ```
 3.  Install the package using `pip`. The `.` tells pip to install from the current directory.
     ```bash
@@ -69,9 +69,9 @@ You can install HCR-prober from the provided `.zip` file or by cloning a Git rep
     ```bash
     cd hcr-prober
     ```
-3.  Install the package in editable mode (`-e`), which is recommended for developers. This allows you to modify the source code without needing to reinstall.
+3.  Install the package.
     ```bash
-    pip install -e .
+    pip install ./
     ```
 
 After installation, the command `hcr-prober` will be available everywhere in your system. You can verify this by running:
