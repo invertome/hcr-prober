@@ -3,6 +3,5 @@
   "B2": { "up": "CCTCGTAAATCCTCATCA", "dn": "ATCATCCAGTAAACCGCC", "upspc": "aa", "dnspc": "aa" },
   "B3": { "up": "GTCCCTGCCTCTATATCT", "dn": "CCACTCAACTTTAACCCG", "upspc": "tt", "dnspc": "tt" },
   "B4": { "up": "CCTCAACCTACCTCCAAC", "dn": "TCTCACCATATTCGCTTC", "upspc": "aa", "dnspc": "at" },
-  "B5": { "up": "CTCACTCCCAATCTCTAT", "dn": "CTACCCTACAAATCCAAT", "upspc": "aa", "dnspc": "aa" },
-  "B7": { "up": "CTTCAACCTCCACCTACC", "dn": "TCCAATCCCTACCCTCAC", "upspc": "ww", "dnspc": "ww" }
+  "B5": { "up": "CTCACTCCCAATCTCTAT", "dn": "CTACCCTACAAATCCAAT", "upspc": "aa", "dnspc": "aa" }
 }
