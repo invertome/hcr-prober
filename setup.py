@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='hcr-prober',
-    version='1.4.0',
+    version='1.5.0',
     packages=find_packages(),
     author='Jorge L. Perez-Moreno, Ph.D.',
     description='An advanced tool for HCR v3.0 probe design with enhanced specificity filtering and reporting.',
