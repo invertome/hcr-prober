@@ -51,11 +51,11 @@ You can install HCR-prober from the provided `.zip` file or by cloning a Git rep
 
 1.  Unzip the project file provided.
     ```bash
-    unzip HCR-prober-project-v1.4.0.zip
+    unzip HCR-prober-project-v1.5.0.zip
     ```
 2.  Navigate into the newly created directory.
     ```bash
-    cd HCR-prober-project-v1.4.0
+    cd HCR-prober-project-v1.5.0
     ```
 3.  Install the package using `pip`. The `.` tells pip to install from the current directory.
     ```bash
