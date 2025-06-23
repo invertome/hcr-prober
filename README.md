@@ -1,4 +1,4 @@
-# HCR-prober v1.4.0: Toolkit for HCR Probe Design
+# HCR-prober v1.5.0: Toolkit for HCR Probe Design
 
 ## Overview
 
@@ -10,7 +10,10 @@ This toolkit is designed for molecular biologists and bioinformaticians who need
 
 - **Robust Probe Design Engine:** Implements a core filtering cascade based on GC content, melting temperature (Tm), homopolymer runs, and inter-probe spacing.
 - **Advanced Specificity Screening:** Leverages the power of local NCBI BLAST+ to screen probes against entire transcriptomes, ensuring they only bind to their intended target.
-- **Flexible BLAST Modes:** Offers different strategies for positive screening, from a permissive 'discovery' mode to a highly stringent 'specific hit' mode.
+ - **Advanced Positive Selection Filtering:** You can now control how probes are selected based on their BLAST hits against a reference transcriptome using the `--positive-selection-strategy` flag:
+   - `any-strong-hit` (Default): The original behavior. Keeps any probe with at least one high-quality BLAST hit.
+   - `best-coverage`: A new, robust algorithm that identifies the transcript with the best coverage (most unique probe hits) and highest average quality (bitscore), then selects probes that are unique to that transcript. This is highly recommended for avoiding false positives from paralogs or repetitive elements.
+   - `specific-id`: Keeps only probes that *uniquely* hit a user-specified transcript ID (provided with `--target-transcript-id`).
 - **Automated Isoform Analysis:** Includes a powerful `isoform-split` command that automatically designs two sets of probes: one to detect all versions of a gene, and other sets to detect each unique isoform individually.
 - **Batch Processing:** Built-in support for designing probes for all transcripts in a FASTA file at once, and for swapping HCR amplifiers on entire directories of existing probe sets.
 - **Comprehensive & Transparent Reporting:** For every run, successful or not, the tool generates a detailed summary file with run parameters, a filtering funnel showing how many probes passed each step, and exhaustive BLAST hit tables for easy troubleshooting.
