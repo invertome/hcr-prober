@@ -1,7 +1,7 @@
 # hcr_prober/main.py
 import argparse, os, sys, json, shutil, itertools, tempfile
 from loguru import logger
-from . import file_io, prober, blast_wrapper, isoform_analyzer, swapper, visualization
+from . import file_io, prober, blast_wrapper, isoform_analyzer, swapper
 
 def setup_logging():
     logger.remove(); logger.add(sys.stderr, format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>')
@@ -30,11 +30,11 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--max-tm', type=float, default=100.0, help='(Optional) Max Tm (Celsius). Default is off.')
     thermo_group.add_argument('--max-homopolymer', type=int, default=4); thermo_group.add_argument('--max-gc-diff', type=float, default=15.0)
     blast_group.add_argument('--blast-ref', help='Path to FASTA for positive BLAST screen.')
-    # NEW: Add argument for positive selection strategy
-    blast_group.add_argument('--positive-selection-strategy', choices=['any-strong-hit', 'most-likely-transcript', 'specific-transcript'], default='any-strong-hit', help='Strategy for selecting probes based on BLAST hits.')
-    # NEW: Add argument for the specific transcript ID, used with 'specific-transcript' strategy
-    blast_group.add_argument('--target-transcript-id', help='The exact transcript ID to target when using the \'specific-transcript\' strategy.')
-    blast_group.add_argument('--min-bitscore', type=float, default=75.0); blast_group.add_argument('--max-evalue', type=float, default=1e-10)
+    # UPDATED: Changed strategy name to 'best-coverage' and 'specific-id'.
+    blast_group.add_argument('--positive-selection-strategy', choices=['any-strong-hit', 'best-coverage', 'specific-id'], default='any-strong-hit', help='Strategy for selecting probes based on BLAST hits.')
+    blast_group.add_argument('--target-transcript-id', help='The exact transcript ID to target when using the \'specific-id\' strategy.')
+    blast_group.add_argument('--min-bitscore', type=float, default=75.0, help='Minimum bitscore for the BLAST discovery phase.')
+    blast_group.add_argument('--max-evalue', type=float, default=1e-10, help='Maximum e-value for the BLAST discovery phase.')
     blast_group.add_argument('--blast-extra-args', type=str, default='')
     adv_group.add_argument('--window-size', type=int, default=52); adv_group.add_argument('--probe-len', type=int, default=25); adv_group.add_argument('--spacer-len', type=int, default=2)
 
@@ -58,7 +58,7 @@ def run_design_pipeline(gene_name, seq, amplifier, output_dir, temp_dir, args):
 def main():
     setup_logging()
     config = file_io.load_config('hcr-prober.yaml')
-    parser = argparse.ArgumentParser(description='HCR-prober v1.4.0', formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description='HCR-prober v1.5.0', formatter_class=argparse.RawTextHelpFormatter)
     subparsers = parser.add_subparsers(dest='command', required=True)
 
     p_design = subparsers.add_parser('design', help='Design probes for standard transcripts.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -89,8 +89,8 @@ def main():
     if args.command in ['design', 'isoform-split']:
         check_dependencies()
         # Validate arguments
-        if args.positive_selection_strategy == 'specific-transcript' and not args.target_transcript_id:
-            logger.critical('FATAL: The \'specific-transcript\' strategy requires you to provide --target-transcript-id.')
+        if args.positive_selection_strategy == 'specific-id' and not args.target_transcript_id:
+            logger.critical('FATAL: The \'specific-id\' strategy requires you to provide --target-transcript-id.')
             sys.exit(1)
         for amp in args.amplifier:
             if amp not in args.amplifiers: logger.critical(f'Amplifier \'{amp}\' not found.'); sys.exit(1)

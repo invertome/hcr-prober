@@ -20,7 +20,7 @@ def generate_svg_probe_map(probes, seq_len, amp, gene, out_path):
     svg.append(f'<text x="{width - padding}" y="{track_y + track_height + 15}" text-anchor="end" class="label">{seq_len}</text>')
     
     # Draw probes
-    scale = (width - 2 * padding) / seq_len
+    scale = (width - 2 * padding) / seq_len if seq_len > 0 else 0
     for i, probe in enumerate(probes):
         start_px = padding + probe['start_pos_on_sense'] * scale
         probe_width = 52 * scale # Window size

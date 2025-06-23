@@ -33,7 +33,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
 
     # Always write the summary file for troubleshooting.
     with open(os.path.join(amp_dir, f'{gene_name}_{amplifier}_summary.txt'), 'w') as f:
-        f.write(f'HCR-prober v1.4.0 Summary for: {gene_name} | Amplifier: {amplifier}\n{'='*70}\n')
+        f.write(f'HCR-prober v1.5.0 Summary for: {gene_name} | Amplifier: {amplifier}\n{'='*70}\n')
 
         if not probes:
             f.write('\n*** PIPELINE FAILED TO PRODUCE ANY FINAL PROBES ***\n')
@@ -44,10 +44,10 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         f.write(f'  Tm Range: {args.min_tm}-{args.max_tm} C\n')
         if args.blast_ref:
             f.write(f'  BLAST Reference: {os.path.basename(args.blast_ref)}\n')
-            f.write(f'  Bitscore Cutoff: {args.min_bitscore}\n')
-            f.write(f'  E-value Cutoff: {args.max_evalue}\n')
+            f.write(f'  Discovery Bitscore Cutoff: {args.min_bitscore}\n')
+            f.write(f'  Discovery E-value Cutoff: {args.max_evalue}\n')
             f.write(f'  Positive Selection Strategy: {args.positive_selection_strategy}\n')
-            if args.positive_selection_strategy == 'specific-transcript':
+            if args.positive_selection_strategy == 'specific-id':
                 f.write(f'    Target Transcript ID: {args.target_transcript_id}\n')
 
         f.write('\n\n--- Filtering Funnel ---\n')
@@ -83,9 +83,9 @@ def _write_blast_report_section(f, blast_reports):
         f.write(f'\n--- {screen_type.upper()} SCREEN ---\n')
         pd.set_option('display.max_rows', None); pd.set_option('display.width', 1000); pd.set_option('display.max_colwidth', None)
         if not report['strong_hits'].empty:
-            f.write('\n[+] High-Quality BLAST Hits (Probes Passing Filter):\n')
-            f.write('This table shows ALL high-quality hits found for ANY probe candidate.\n')
+            f.write('\n[+] Plausible BLAST Hits (Used for Filtering):\n')
+            f.write('This table shows ALL hits that passed the initial discovery thresholds.\n')
             f.write('The final probes were selected from this pool based on your chosen selection strategy.\n')
             f.write(report['strong_hits'].to_string() + '\n')
         else:
-            f.write('\n[+] No BLAST hits passed the bitscore/e-value filter.\n')
+            f.write('\n[+] No BLAST hits passed the discovery thresholds.\n')
