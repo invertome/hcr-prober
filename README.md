@@ -178,10 +178,10 @@ hcr-prober design \
     --min-probe-distance 0
 ```
 **Explanation:**
-By setting `--min-probe-distance 0` and relaxing GC constraints, you allow the optimal spacing algorithm to pack the maximum number of probes onto the transcript.
+By setting `--min-probe-distance 0` and relaxing GC constraints, you allow the optimal spacing algorithm to pack the maximum number of probes onto the transcript. A value of 0 is not recommended.
 
 ### Example 2: Optimal, One-Shot Isoform Probe Design
-**Goal:** Design probe sets for an Opsin gene with two isoforms: one set that detects all isoforms and specific sets for each unique isoform.
+**Goal:** Design probe sets for an Opsin gene with two isoforms: one set that detects all isoforms and specific sets for each unique isoform. Sequence IDs are in the format of Opsin1_iso1, Opsin1_iso2, Opsin2_iso1, etc.
 ```bash
 hcr-prober isoform-split \
     -i all_opsin_isoforms.fasta \
