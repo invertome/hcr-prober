@@ -1,5 +1,5 @@
 # hcr_prober/blast_wrapper.py
-import subprocess, os, pandas as pd, tempfile
+import subprocess, os, sys, pandas as pd, tempfile
 from loguru import logger
 def create_blast_db(ref_fasta, db_path):
     if not ref_fasta: return None
@@ -10,7 +10,7 @@ def create_blast_db(ref_fasta, db_path):
     os.makedirs(os.path.dirname(db_name), exist_ok=True)
     cmd = ['makeblastdb', '-in', ref_fasta, '-dbtype', 'nucl', '-out', db_name, '-title', db_name_prefix]
     try: subprocess.run(cmd, check=True, capture_output=True, text=True)
-    except Exception as e: logger.critical(f'FATAL: Failed to create BLAST DB. Error: {e.stderr if hasattr(e, 'stderr') else e}'); exit(1)
+    except Exception as e: logger.critical(f'FATAL: Failed to create BLAST DB. Error: {e.stderr if hasattr(e, "stderr") else e}'); sys.exit(1)
     return db_name
 def _run_blast(probes, db_name, temp_dir, extra_args):
     if not probes: return None
@@ -21,7 +21,12 @@ def _run_blast(probes, db_name, temp_dir, extra_args):
     cmd = ['blastn', '-query', query_path, '-db', db_name, '-out', blast_out_path, '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore', '-task', 'blastn-short']
     if extra_args: cmd.extend(extra_args)
     try: subprocess.run(cmd, check=True, capture_output=True, text=True)
-    except Exception as e: logger.error(f'BLAST search failed. Error: {e}'); return None
+    except subprocess.CalledProcessError as e:
+        logger.error(f'BLAST search failed with return code {e.returncode}. stderr: {e.stderr}')
+        return None
+    except Exception as e:
+        logger.error(f'Unexpected error during BLAST: {e}')
+        return None
     finally: os.remove(query_path)
     return blast_out_path
 def filter_probes_by_blast(probes, args, temp_dir):
@@ -58,7 +63,7 @@ def filter_probes_by_blast(probes, args, temp_dir):
             ranked_transcripts = sorted(transcript_scores, key=lambda x: (x['breadth'], x['quality']), reverse=True)
             best_transcript_id = ranked_transcripts[0]['id']
             logger.info(f'Identified "{best_transcript_id}" as best-supported transcript (Breadth: {ranked_transcripts[0]['breadth']}, Avg. Quality: {ranked_transcripts[0]['quality']:.2f}).')
-            strong_hits = plausible_hits[plausible_hits['bitscore'] >= 75.0]
+            strong_hits = plausible_hits[plausible_hits['bitscore'] >= args.min_bitscore]
             hits_on_best = strong_hits[strong_hits['hit_id'] == best_transcript_id]
             probes_on_best = set(hits_on_best['pair_id'])
             hits_off_best = strong_hits[strong_hits['hit_id'] != best_transcript_id]
