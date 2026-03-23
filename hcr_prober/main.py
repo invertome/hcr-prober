@@ -52,6 +52,17 @@ def create_probe_blueprint(gene_name, seq, temp_dir, args):
     blast_formatted_probes = prober.format_probes_for_blast(thermo_candidates, gene_name, seq, args)
     specific_probes, blast_reports = blast_wrapper.filter_probes_by_blast(blast_formatted_probes, args, temp_dir)
     audit_trail['after_blast_filter'] = len(specific_probes)
+    # Negative BLAST screen
+    if args.blast_ref or getattr(args, 'blast_negative_ref', None):
+        target_ids = {gene_name}
+        if hasattr(args, 'target_transcript_id') and args.target_transcript_id:
+            target_ids.add(args.target_transcript_id)
+        if hasattr(args, '_isoform_ids'):
+            target_ids.update(args._isoform_ids)
+        specific_probes, neg_report = blast_wrapper.run_negative_screen(
+            specific_probes, args, temp_dir, target_ids)
+        audit_trail['after_negative_blast'] = len(specific_probes)
+        blast_reports['NEGATIVE'] = neg_report
     if not specific_probes: return None, blast_reports, audit_trail
     spaced_probes = prober.select_spatially_diverse_probes(specific_probes, args)
     audit_trail['after_spacing_filter'] = len(spaced_probes)

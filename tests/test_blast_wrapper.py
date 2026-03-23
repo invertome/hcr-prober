@@ -14,3 +14,14 @@ def test_no_bare_exit():
     import re
     bare_exits = re.findall(r'(?<!sys\.)exit\(1\)', source)
     assert len(bare_exits) == 0, f"Found {len(bare_exits)} bare exit(1) calls"
+
+def test_run_negative_screen_signature():
+    """Verify run_negative_screen function exists with expected signature."""
+    from hcr_prober.blast_wrapper import run_negative_screen
+    import inspect
+    sig = inspect.signature(run_negative_screen)
+    params = list(sig.parameters.keys())
+    assert 'probes' in params
+    assert 'args' in params
+    assert 'temp_dir' in params
+    assert 'target_ids' in params
