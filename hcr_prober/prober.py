@@ -2,6 +2,7 @@
 import re
 import numpy as np
 import copy
+import primer3
 from loguru import logger
 from .utils import sequence_utils as su, thermo_utils as tu
 from . import file_io
@@ -55,6 +56,9 @@ def generate_thermo_candidates(sequence, args):
             w['tm_dn'], w['tm_up'] = tm1, tm2
             tm_passed.append(w)
     audit['after_tm_filter'] = len(tm_passed)
+    if hasattr(args, 'max_hairpin_dg'):
+        tm_passed = filter_by_structure(tm_passed, args)
+        audit['after_structure_filter'] = len(tm_passed)
     return tm_passed, audit
 
 def select_spatially_diverse_probes(probes_to_filter, args):
@@ -97,6 +101,33 @@ def select_spatially_diverse_probes(probes_to_filter, args):
     selected_probes.reverse()
     logger.info(f"Optimal spacing filter selected {len(selected_probes)} probes from {len(probes_to_filter)} specific candidates.")
     return selected_probes
+
+def filter_by_structure(candidates, args):
+    """Filter probes by secondary structure: hairpins, homodimers, heterodimers."""
+    max_hp = getattr(args, 'max_hairpin_dg', -3.0)
+    max_homo = getattr(args, 'max_homodimer_dg', -5.0)
+    max_hetero = getattr(args, 'max_heterodimer_dg', -5.0)
+    passed = []
+    for w in candidates:
+        dn, up = w['probe_dn_target'], w['probe_up_target']
+        hp_dn = primer3.calcHairpin(dn).dg / 1000.0
+        hp_up = primer3.calcHairpin(up).dg / 1000.0
+        if hp_dn < max_hp or hp_up < max_hp:
+            continue
+        homo_dn = primer3.calcHomodimer(dn).dg / 1000.0
+        homo_up = primer3.calcHomodimer(up).dg / 1000.0
+        if homo_dn < max_homo or homo_up < max_homo:
+            continue
+        hetero = primer3.calcHeterodimer(dn, up).dg / 1000.0
+        if hetero < max_hetero:
+            continue
+        w['hairpin_dg_dn'] = round(hp_dn, 2)
+        w['hairpin_dg_up'] = round(hp_up, 2)
+        w['homodimer_dg_dn'] = round(homo_dn, 2)
+        w['homodimer_dg_up'] = round(homo_up, 2)
+        w['heterodimer_dg'] = round(hetero, 2)
+        passed.append(w)
+    return passed
 
 def format_probes_for_blast(thermo_candidates, gene_name, sequence, args):
     formatted_probes = []
