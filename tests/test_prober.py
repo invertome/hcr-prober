@@ -2,6 +2,7 @@ import pytest
 import argparse
 from hcr_prober.prober import generate_thermo_candidates
 from hcr_prober.prober import select_spatially_diverse_probes
+from hcr_prober.prober import filter_by_structure
 
 def make_args(**kwargs):
     defaults = dict(
@@ -89,3 +90,34 @@ def test_dp_skip_case_critical():
     ]
     result = select_spatially_diverse_probes(probes, args)
     assert len(result) == 3  # a, c, e (or a, b, d or similar 3-probe set)
+
+
+def test_structure_filter_rejects_hairpin():
+    """A known hairpin-forming sequence should be rejected."""
+    args = make_args(max_hairpin_dg=-3.0, max_homodimer_dg=-5.0, max_heterodimer_dg=-5.0)
+    candidates = [{
+        'probe_dn_target': 'GCGCGCGCGCAAAAAGCGCGCGCGC',
+        'probe_up_target': 'ATATAGATCGATCGATCGATCGATCG',
+        'gc_dn': 50, 'gc_up': 40, 'tm_dn': 60, 'tm_up': 55,
+    }]
+    result = filter_by_structure(candidates, args)
+    assert len(result) == 0, f"Expected hairpin rejection but got {len(result)} probes through"
+
+def test_structure_filter_stores_dg_values():
+    """Structure filter should store dG values in candidates that pass."""
+    # Very permissive thresholds — everything passes
+    args = make_args(max_hairpin_dg=-100.0, max_homodimer_dg=-100.0, max_heterodimer_dg=-100.0)
+    candidates = [{
+        'probe_dn_target': 'ATGCGATCGATCGATCGATCGATCG',
+        'probe_up_target': 'TACGCTAGCTAGCTAGCTAGCTAGC',
+        'gc_dn': 50, 'gc_up': 50, 'tm_dn': 60, 'tm_up': 60,
+    }]
+    result = filter_by_structure(candidates, args)
+    assert len(result) == 1
+    c = result[0]
+    assert 'hairpin_dg_dn' in c
+    assert 'hairpin_dg_up' in c
+    assert 'homodimer_dg_dn' in c
+    assert 'homodimer_dg_up' in c
+    assert 'heterodimer_dg' in c
+    assert isinstance(c['hairpin_dg_dn'], float)
