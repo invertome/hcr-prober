@@ -1,4 +1,5 @@
 # hcr_prober/prober.py
+import re
 import numpy as np
 import copy
 from loguru import logger
@@ -27,7 +28,9 @@ def generate_thermo_candidates(sequence, args):
             audit['after_region_mask'] = len(all_windows)
     if getattr(args, 'mask_sequences', None):
         mask_sequences = list(file_io.read_fasta(args.mask_sequences).values())
-        all_windows = [w for w in all_windows if not any(m.upper() in w['window_sequence'].upper() for m in mask_sequences)]
+        if mask_sequences:
+            mask_pattern = re.compile('|'.join(re.escape(m.upper()) for m in mask_sequences))
+            all_windows = [w for w in all_windows if not mask_pattern.search(w['window_sequence'].upper())]
         audit['after_seq_mask'] = len(all_windows)
     thermo_passed = [w for w in all_windows if not su.has_homopolymer(w['window_sequence'], args.max_homopolymer) and args.min_gc <= tu.calculate_gc_content(w['window_sequence']) <= args.max_gc]
     audit['after_thermo_filter'] = len(thermo_passed)
@@ -55,26 +58,42 @@ def generate_thermo_candidates(sequence, args):
     return tm_passed, audit
 
 def select_spatially_diverse_probes(probes_to_filter, args):
-    """Selects the maximum possible number of non-overlapping probes using a dynamic programming algorithm."""
+    """Selects the maximum possible number of non-overlapping probes using dynamic programming with binary search."""
     if not probes_to_filter: return []
+    from bisect import bisect_right
     sorted_probes = sorted(probes_to_filter, key=lambda p: p['start_pos_rev'] + args.window_size)
     num_probes = len(sorted_probes)
-    dp, backtrack = [1] * num_probes, [-1] * num_probes
-    required_footprint = args.window_size + args.min_probe_distance
-    for i in range(num_probes):
-        for j in range(i):
-            if sorted_probes[j]['start_pos_rev'] + required_footprint <= sorted_probes[i]['start_pos_rev']:
-                if dp[j] + 1 > dp[i]:
-                    dp[i], backtrack[i] = dp[j] + 1, j
-    if not dp: return []
-    max_len, best_end_index = 0, -1
-    for i in range(num_probes):
-        if dp[i] > max_len:
-            max_len, best_end_index = dp[i], i
-    selected_probes, curr_index = [], best_end_index
-    while curr_index != -1:
-        selected_probes.append(sorted_probes[curr_index])
-        curr_index = backtrack[curr_index]
+    # Build array of end positions for binary search
+    end_positions = [p['start_pos_rev'] + args.window_size for p in sorted_probes]
+    # dp[i] = max probes considering probes 0..i
+    # choice[i] = 'take' or 'skip' for backtracking
+    dp = [0] * num_probes
+    backtrack = [-1] * num_probes
+    choice = ['take'] * num_probes
+    # Base case: taking probe 0 gives 1
+    dp[0] = 1
+    for i in range(1, num_probes):
+        # Option 1: skip probe i — inherit dp[i-1]
+        dp[i] = dp[i - 1]
+        choice[i] = 'skip'
+        backtrack[i] = i - 1
+        # Option 2: take probe i — find last non-overlapping predecessor via bisect
+        threshold = sorted_probes[i]['start_pos_rev'] - args.min_probe_distance
+        j = bisect_right(end_positions, threshold) - 1
+        take_val = (dp[j] if j >= 0 else 0) + 1
+        if take_val > dp[i]:
+            dp[i] = take_val
+            choice[i] = 'take'
+            backtrack[i] = j  # -1 if no predecessor
+    # Backtrack from the end to reconstruct the solution
+    selected_probes = []
+    i = num_probes - 1
+    while i >= 0:
+        if choice[i] == 'take':
+            selected_probes.append(sorted_probes[i])
+            i = backtrack[i]
+        else:
+            i = i - 1
     selected_probes.reverse()
     logger.info(f"Optimal spacing filter selected {len(selected_probes)} probes from {len(probes_to_filter)} specific candidates.")
     return selected_probes
