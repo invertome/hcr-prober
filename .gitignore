@@ -1,0 +1,24 @@
+.beads/
+AGENTS.md
+CLAUDE.md
+docs/
+
+# Analysis outputs — local only
+cerebrin_*/
+swapped_probes/
+*.xlsx
+*.tsv
+*.fasta
+!hcr_prober/config/*.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
