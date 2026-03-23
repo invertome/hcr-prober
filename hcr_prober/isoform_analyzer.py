@@ -2,7 +2,7 @@
 import os
 from loguru import logger
 import numpy as np
-from Bio import pairwise2
+from Bio.Align import PairwiseAligner
 
 def group_sequences_by_prefix(sequences, delimiter='_'):
     groups = {}
@@ -35,7 +35,7 @@ def invert_intervals(sequence_length, intervals_to_mask):
     if current_pos < sequence_length: inverted.append((current_pos, sequence_length))
     return inverted
 
-def find_common_regions(isoform_group):
+def find_common_regions(isoform_group, min_interval_len=52):
     if len(isoform_group) < 2:
         logger.warning(f'Gene group has only one sequence. Entire sequence treated as "common".')
         ref_id = list(isoform_group.keys())[0]
@@ -50,23 +50,30 @@ def find_common_regions(isoform_group):
     alignment_params = {'match': 2, 'mismatch': -1, 'open_gap': -5, 'extend_gap': -2}
     logger.info(f"Aligning {len(other_isoforms)} isoform(s) against reference with parameters: {alignment_params}")
 
+    aligner = PairwiseAligner()
+    aligner.mode = 'local'
+    aligner.match_score = alignment_params['match']
+    aligner.mismatch_score = alignment_params['mismatch']
+    aligner.open_gap_score = alignment_params['open_gap']
+    aligner.extend_gap_score = alignment_params['extend_gap']
+
     for query_id, query_seq in other_isoforms.items():
-        alignments = pairwise2.align.localms(ref_seq, query_seq, alignment_params['match'], alignment_params['mismatch'], alignment_params['open_gap'], alignment_params['extend_gap'])
+        alignments = aligner.align(ref_seq, query_seq)
         if not alignments:
-            logger.warning(f'No significant alignment found between {ref_id} and {query_id}. Cannot establish common regions.')
+            logger.error(f'No significant alignment found between {ref_id} and {query_id}. Isoforms may be too divergent.')
             return ref_id, []
 
         best_score = alignments[0].score
-        high_scoring_alignments = [aln for aln in alignments if aln.score > best_score * 0.8]
         isoform_coverage = np.zeros(len(ref_seq), dtype=bool)
-        for aln in high_scoring_alignments:
-            ref_pos = aln.start
-            for ref_char, query_char in zip(aln.seqA, aln.seqB):
-                if ref_char != '-':
-                    if query_char != '-': isoform_coverage[ref_pos] = True
-                    ref_pos +=1
+        for aln in alignments:
+            if aln.score < best_score * 0.8:
+                break  # alignments are sorted by score descending
+            # .aligned[0] gives reference blocks as list of (start, end) tuples
+            # Each block represents a region where both ref and query are aligned (no gaps)
+            for ref_start, ref_end in aln.aligned[0]:
+                isoform_coverage[ref_start:ref_end] = True
         coverage_array += isoform_coverage
-    
+
     common_indices = np.where(coverage_array == len(other_isoforms))[0]
     if common_indices.size == 0:
         logger.info("No regions were found to be common across all isoforms.")
@@ -76,7 +83,7 @@ def find_common_regions(isoform_group):
     split_points = np.where(gaps)[0] + 1
     interval_indices = np.split(common_indices, split_points)
     raw_intervals = [(indices[0], indices[-1] + 1) for indices in interval_indices if indices.size > 0]
-    min_len = 52
+    min_len = min_interval_len
     final_intervals = [iv for iv in raw_intervals if (iv[1] - iv[0]) >= min_len]
     merged_common = merge_intervals(final_intervals)
     total_common_len = sum(end - start for start, end in merged_common)
