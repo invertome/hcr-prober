@@ -110,15 +110,15 @@ def filter_by_structure(candidates, args):
     passed = []
     for w in candidates:
         dn, up = w['probe_dn_target'], w['probe_up_target']
-        hp_dn = primer3.calcHairpin(dn).dg / 1000.0
-        hp_up = primer3.calcHairpin(up).dg / 1000.0
+        hp_dn = primer3.calc_hairpin(dn).dg / 1000.0
+        hp_up = primer3.calc_hairpin(up).dg / 1000.0
         if hp_dn < max_hp or hp_up < max_hp:
             continue
-        homo_dn = primer3.calcHomodimer(dn).dg / 1000.0
-        homo_up = primer3.calcHomodimer(up).dg / 1000.0
+        homo_dn = primer3.calc_homodimer(dn).dg / 1000.0
+        homo_up = primer3.calc_homodimer(up).dg / 1000.0
         if homo_dn < max_homo or homo_up < max_homo:
             continue
-        hetero = primer3.calcHeterodimer(dn, up).dg / 1000.0
+        hetero = primer3.calc_heterodimer(dn, up).dg / 1000.0
         if hetero < max_hetero:
             continue
         w['hairpin_dg_dn'] = round(hp_dn, 2)
