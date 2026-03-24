@@ -33,6 +33,21 @@ def load_config(config_path):
         with open(config_path, 'r') as f: return yaml.safe_load(f) or {}
     return {}
 
+def write_details_csv(probes, csv_path):
+    """Write detailed thermodynamic CSV for each probe pair."""
+    columns = [
+        'pair_id', 'pair_num', 'start_pos_on_sense',
+        'probe_dn_target', 'probe_up_target',
+        'gc_dn', 'gc_up', 'tm_dn', 'tm_up',
+        'hairpin_dg_dn', 'hairpin_dg_up',
+        'homodimer_dg_dn', 'homodimer_dg_up', 'heterodimer_dg'
+    ]
+    rows = []
+    for p in sorted(probes, key=lambda x: x.get('pair_num', 0)):
+        row = {col: p.get(col, 'N/A') for col in columns}
+        rows.append(row)
+    pd.DataFrame(rows, columns=columns).to_csv(csv_path, index=False)
+
 def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, audit_trail):
     amp_dir = os.path.join(args.output_dir, gene_name, amplifier)
     os.makedirs(amp_dir, exist_ok=True)
@@ -72,6 +87,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         with open(os.path.join(amp_dir, f'{gene_name}_{amplifier}_probes.fasta'), 'w') as f:
             for p in sorted(probes, key=lambda x: x['pair_num']): f.write(f'>{p['pair_id']}_A\n{p['probe_dn_final']}\n>{p['pair_id']}_B\n{p['probe_up_final']}\n')
         visualization.generate_svg_probe_map(probes, len(sequence), amplifier, gene_name, os.path.join(amp_dir, f'{gene_name}_{amplifier}_probe_map.svg'))
+        write_details_csv(probes, os.path.join(amp_dir, f'{gene_name}_{amplifier}_details.csv'))
     else: logger.warning(f'No final probes for {gene_name} with amplifier {amplifier}. Report created.')
 
 def _write_blast_report_section(f, blast_reports, final_probes):
