@@ -132,12 +132,20 @@ def filter_by_structure(candidates, args):
 def format_probes_for_blast(thermo_candidates, gene_name, sequence, args):
     formatted_probes = []
     for i, p_data in enumerate(thermo_candidates):
-        formatted_probes.append({
-            'pair_id': f'{gene_name}_cand_{i+1}', 'probe_up_target': p_data['probe_up_target'],
+        probe = {
+            'pair_id': f'{gene_name}_cand_{i+1}',
+            'probe_up_target': p_data['probe_up_target'],
             'probe_dn_target': p_data['probe_dn_target'],
             'start_pos_on_sense': len(sequence) - p_data['start_pos_rev'] - args.window_size,
-            'start_pos_rev': p_data['start_pos_rev']
-        })
+            'start_pos_rev': p_data['start_pos_rev'],
+        }
+        # Carry forward all cached thermo/structure values
+        for key in ('gc_dn', 'gc_up', 'tm_dn', 'tm_up',
+                     'hairpin_dg_dn', 'hairpin_dg_up', 'homodimer_dg_dn',
+                     'homodimer_dg_up', 'heterodimer_dg'):
+            if key in p_data:
+                probe[key] = p_data[key]
+        formatted_probes.append(probe)
     return formatted_probes
 
 def finalize_probes(blueprint_probes, amplifier_name, amplifiers, args):
