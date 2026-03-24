@@ -113,6 +113,9 @@ def main():
 
     if args.command == 'design':
         sequences = file_io.read_fasta(args.input)
+        if args.gene_name and args.gene_name not in sequences:
+            logger.error(f'Gene name "{args.gene_name}" not found. Available: {", ".join(list(sequences.keys())[:20])}')
+            sys.exit(1)
         sequences_to_process = {k: v for k, v in sequences.items() if not args.gene_name or k == args.gene_name}
         if not sequences_to_process: logger.error(f'No sequences in \'{args.input}\' match --gene-name \'{args.gene_name}\'.'); sys.exit(1)
         logger.info(f'Starting design jobs for {len(sequences_to_process)} gene(s) and {len(args.amplifier)} amplifier(s).')

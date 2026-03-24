@@ -1,5 +1,5 @@
 # hcr_prober/visualization.py
-def generate_svg_probe_map(probes, seq_len, amp, gene, out_path):
+def generate_svg_probe_map(probes, seq_len, amp, gene, out_path, window_size=52):
     """Generates an SVG image showing the locations of probes on the target transcript."""
     # **UPDATED v1.9.5**: Compact layout with probes on one side.
     width, height = 800, 120
@@ -23,7 +23,7 @@ def generate_svg_probe_map(probes, seq_len, amp, gene, out_path):
 
     for i, probe in enumerate(sorted_probes):
         start_px = padding + probe['start_pos_on_sense'] * scale
-        probe_width = (probe['start_pos_rev'] + 52 - probe['start_pos_rev']) * scale
+        probe_width = window_size * scale
         # **UPDATED v1.9.5**: Draw all probes above the track, not alternating.
         probe_y = track_y - track_height
         color = colors[i % len(colors)]
