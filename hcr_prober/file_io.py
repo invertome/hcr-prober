@@ -66,6 +66,12 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         f.write(f'  Min Probe Distance: {args.min_probe_distance} nt\n')
         f.write(f'  GC Range: {args.min_gc}-{args.max_gc} %\n')
         f.write(f'  Tm Range: {args.min_tm}-{args.max_tm} C\n')
+        na = getattr(args, 'na_conc', 50)
+        mg = getattr(args, 'mg_conc', 0)
+        dntps = getattr(args, 'dntp_conc', 0)
+        dna = getattr(args, 'dna_conc', 25)
+        if na != 50 or mg != 0 or dntps != 0 or dna != 25:
+            f.write(f'  Na+ conc: {na} mM | Mg2+ conc: {mg} mM | dNTP conc: {dntps} mM | DNA conc: {dna} nM\n')
         if args.blast_ref:
             f.write(f'  BLAST Reference: {os.path.basename(args.blast_ref)}\n')
             f.write(f'  Discovery Bitscore Cutoff: {args.min_bitscore}\n')
@@ -76,10 +82,18 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         audit_key_map = {
             'initial_windows': 'Initial Windows', 'after_5prime_skip': 'After 5\' Skip', 'after_region_mask': 'After Region Masking', 'after_seq_mask': 'After Sequence Masking',
             'after_thermo_filter': 'Thermo-stable Candidates', 'after_gc_balance_filter': 'After GC Balance', 'after_tm_filter': 'After Tm',
-            'after_blast_filter': 'Specific Candidates (Post-BLAST)', 'after_spacing_filter': 'Spatially-Diverse Blueprint Probes',
+            'after_structure_filter': 'After Structure Filter',
+            'after_blast_filter': 'Specific Candidates (Post-BLAST)', 'after_negative_blast': 'After Negative BLAST Screen',
+            'after_spacing_filter': 'Spatially-Diverse Blueprint Probes',
             'after_subsampling': 'After Final Subsampling'
         }
-        ordered_keys = ['initial_windows', 'after_5prime_skip', 'after_region_mask', 'after_seq_mask', 'after_thermo_filter', 'after_gc_balance_filter', 'after_tm_filter', 'after_blast_filter', 'after_spacing_filter', 'after_subsampling']
+        ordered_keys = [
+            'initial_windows', 'after_5prime_skip', 'after_region_mask', 'after_seq_mask',
+            'after_thermo_filter', 'after_gc_balance_filter', 'after_tm_filter',
+            'after_structure_filter',
+            'after_blast_filter', 'after_negative_blast',
+            'after_spacing_filter', 'after_subsampling'
+        ]
         for key in ordered_keys:
             if key in audit_trail: f.write(f'  {audit_trail[key]:>7} {audit_key_map.get(key, key)}\n')
         f.write(f'  ---------------------------\n  {len(probes):>7} Final Probe Pairs\n')
