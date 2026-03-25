@@ -25,8 +25,15 @@ def _swap_amplifiers_on_file(input_path, output_path, args, amplifiers):
         if not found: new_sequences.append(seq)
     df['Sequence'] = new_sequences
     old_pool_name = df['Pool name'][0]
-    try: old_amp = old_pool_name.split('_')[0]; df['Pool name'] = old_pool_name.replace(old_amp, args.new_amplifier) if old_amp in amplifiers else f'{args.new_amplifier}_{old_pool_name}'
-    except (IndexError, AttributeError): df['Pool name'] = f'{args.new_amplifier}_{old_pool_name}'
+    try:
+        old_amp = old_pool_name.split('_')[0]
+        if old_amp in amplifiers:
+            df['Pool name'] = old_pool_name.replace(old_amp, args.new_amplifier)
+        else:
+            logger.warning(f'Could not identify original amplifier "{old_amp}" in pool name "{old_pool_name}". Using fallback naming.')
+            df['Pool name'] = f'{args.new_amplifier}_{old_pool_name}'
+    except (IndexError, AttributeError):
+        df['Pool name'] = f'{args.new_amplifier}_{old_pool_name}'
     df.to_excel(output_path, index=False); logger.success(f'Saved swapped file to: {output_path}'); return True
 def swap_amplifiers(args, amplifiers):
     if args.new_amplifier not in amplifiers: logger.error(f'New amplifier \'{args.new_amplifier}\' not found.'); return

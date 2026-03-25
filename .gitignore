@@ -10,6 +10,7 @@ swapped_probes/
 *.tsv
 *.fasta
 !hcr_prober/config/*.yaml
+!tests/fixtures/*.fasta
 
 # Python
 __pycache__/

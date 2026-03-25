@@ -2,6 +2,7 @@
 import argparse, os, sys, shutil, tempfile, copy
 from loguru import logger
 from . import file_io, prober, blast_wrapper, isoform_analyzer, swapper
+from hcr_prober import __version__
 
 def setup_logging(): logger.remove(); logger.add(sys.stderr, format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>')
 
@@ -27,11 +28,21 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--min-gc', type=float, default=40.0); thermo_group.add_argument('--max-gc', type=float, default=60.0)
     thermo_group.add_argument('--min-tm', type=float, default=40.0); thermo_group.add_argument('--max-tm', type=float, default=55.0)
     thermo_group.add_argument('--max-homopolymer', type=int, default=4); thermo_group.add_argument('--max-gc-diff', type=float, default=15.0)
+    thermo_group.add_argument('--na-conc', type=float, default=50.0, help='Na+ concentration in mM.')
+    thermo_group.add_argument('--mg-conc', type=float, default=0.0, help='Mg2+ concentration in mM.')
+    thermo_group.add_argument('--dntp-conc', type=float, default=0.0, help='dNTP concentration in mM.')
+    thermo_group.add_argument('--dna-conc', type=float, default=25.0, help='DNA oligo concentration in nM.')
+    thermo_group.add_argument('--max-hairpin-dg', type=float, default=-3.0, help='Max hairpin delta-G (kcal/mol).')
+    thermo_group.add_argument('--max-homodimer-dg', type=float, default=-5.0, help='Max homodimer delta-G (kcal/mol).')
+    thermo_group.add_argument('--max-heterodimer-dg', type=float, default=-5.0, help='Max heterodimer delta-G (kcal/mol).')
     blast_group.add_argument('--blast-ref', help='Path to FASTA for positive BLAST screen.')
     blast_group.add_argument('--positive-selection-strategy', choices=['any-strong-hit', 'best-coverage', 'specific-id'], default='any-strong-hit', help='Global BLAST strategy for the design command.')
     blast_group.add_argument('--target-transcript-id', help='The exact transcript ID to target for the \'specific-id\' strategy.')
     blast_group.add_argument('--min-bitscore', type=float, default=75.0); blast_group.add_argument('--max-evalue', type=float, default=1e-10)
     blast_group.add_argument('--blast-extra-args', type=str, default='')
+    blast_group.add_argument('--blast-negative-ref', type=str, default=None, help='FASTA for negative BLAST screen.')
+    blast_group.add_argument('--negative-bitscore', type=float, default=None, help='Bitscore threshold for negative screen (default: same as --min-bitscore).')
+    blast_group.add_argument('--negative-evalue', type=float, default=None, help='E-value threshold for negative screen (default: same as --max-evalue).')
     adv_group.add_argument('--window-size', type=int, default=52); adv_group.add_argument('--probe-len', type=int, default=25); adv_group.add_argument('--spacer-len', type=int, default=2)
 
 def create_probe_blueprint(gene_name, seq, temp_dir, args):
@@ -41,6 +52,17 @@ def create_probe_blueprint(gene_name, seq, temp_dir, args):
     blast_formatted_probes = prober.format_probes_for_blast(thermo_candidates, gene_name, seq, args)
     specific_probes, blast_reports = blast_wrapper.filter_probes_by_blast(blast_formatted_probes, args, temp_dir)
     audit_trail['after_blast_filter'] = len(specific_probes)
+    # Negative BLAST screen
+    if args.blast_ref or getattr(args, 'blast_negative_ref', None):
+        target_ids = {gene_name}
+        if hasattr(args, 'target_transcript_id') and args.target_transcript_id:
+            target_ids.add(args.target_transcript_id)
+        if hasattr(args, '_isoform_ids'):
+            target_ids.update(args._isoform_ids)
+        specific_probes, neg_report = blast_wrapper.run_negative_screen(
+            specific_probes, args, temp_dir, target_ids)
+        audit_trail['after_negative_blast'] = len(specific_probes)
+        blast_reports['NEGATIVE'] = neg_report
     if not specific_probes: return None, blast_reports, audit_trail
     spaced_probes = prober.select_spatially_diverse_probes(specific_probes, args)
     audit_trail['after_spacing_filter'] = len(spaced_probes)
@@ -49,7 +71,7 @@ def create_probe_blueprint(gene_name, seq, temp_dir, args):
 def main():
     setup_logging()
     config = file_io.load_config('hcr-prober.yaml')
-    parser = argparse.ArgumentParser(description='HCR-prober v1.9.5', formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description=f'HCR-prober v{__version__}', formatter_class=argparse.RawTextHelpFormatter)
     subparsers = parser.add_subparsers(dest='command', required=True)
     p_design = subparsers.add_parser('design', help='Design probes for standard transcripts.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     p_design.add_argument('-i', '--input', required=True, help='Input FASTA file.')
@@ -91,6 +113,9 @@ def main():
 
     if args.command == 'design':
         sequences = file_io.read_fasta(args.input)
+        if args.gene_name and args.gene_name not in sequences:
+            logger.error(f'Gene name "{args.gene_name}" not found. Available: {", ".join(list(sequences.keys())[:20])}')
+            sys.exit(1)
         sequences_to_process = {k: v for k, v in sequences.items() if not args.gene_name or k == args.gene_name}
         if not sequences_to_process: logger.error(f'No sequences in \'{args.input}\' match --gene-name \'{args.gene_name}\'.'); sys.exit(1)
         logger.info(f'Starting design jobs for {len(sequences_to_process)} gene(s) and {len(args.amplifier)} amplifier(s).')
