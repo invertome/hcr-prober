@@ -1,14 +1,15 @@
 # hcr_prober/file_io.py
-import os, json, pandas as pd, yaml, glob
+import os, sys, json, pandas as pd, yaml, glob
 import numpy as np
 from . import visualization
 from loguru import logger
 from Bio import SeqIO
+from hcr_prober import __version__
 
 def read_fasta(file_path):
     if not file_path: return {}
     try: return {rec.id: str(rec.seq) for rec in SeqIO.parse(file_path, 'fasta')}
-    except FileNotFoundError: logger.critical(f'FASTA not found: {file_path}'); exit(1)
+    except FileNotFoundError: logger.critical(f'FASTA not found: {file_path}'); sys.exit(1)
 
 def load_amplifiers(pkg_path):
     amplifiers, plugin_dir = {}, os.path.join(pkg_path, 'config', 'amplifiers')
@@ -20,8 +21,14 @@ def load_amplifiers(pkg_path):
             # **FIX v1.9.5**: Corrected syntax for try/with block
             with open(pf, 'r') as f:
                 amplifiers.update(json.load(f))
-        except Exception as e:
-            logger.warning(f'Could not load amplifier plugin \'{os.path.basename(pf)}\': {e}')
+        except json.JSONDecodeError as e:
+            logger.warning(f'Invalid JSON in amplifier plugin {os.path.basename(pf)}: {e}')
+        except IOError as e:
+            logger.warning(f'Could not read amplifier plugin {os.path.basename(pf)}: {e}')
+    invalid = [aid for aid, data in amplifiers.items() if 'up' not in data or 'dn' not in data]
+    for aid in invalid:
+        logger.warning(f'Amplifier {aid} missing required fields (up, dn). Skipping.')
+        del amplifiers[aid]
     if amplifiers:
         logger.info(f'Loaded {len(amplifiers)} amplifiers: {', '.join(amplifiers.keys())}')
     else:
@@ -33,17 +40,38 @@ def load_config(config_path):
         with open(config_path, 'r') as f: return yaml.safe_load(f) or {}
     return {}
 
+def write_details_csv(probes, csv_path):
+    """Write detailed thermodynamic CSV for each probe pair."""
+    columns = [
+        'pair_id', 'pair_num', 'start_pos_on_sense',
+        'probe_dn_target', 'probe_up_target',
+        'gc_dn', 'gc_up', 'tm_dn', 'tm_up',
+        'hairpin_dg_dn', 'hairpin_dg_up',
+        'homodimer_dg_dn', 'homodimer_dg_up', 'heterodimer_dg'
+    ]
+    rows = []
+    for p in sorted(probes, key=lambda x: x.get('pair_num', 0)):
+        row = {col: p.get(col, 'N/A') for col in columns}
+        rows.append(row)
+    pd.DataFrame(rows, columns=columns).to_csv(csv_path, index=False)
+
 def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, audit_trail):
     amp_dir = os.path.join(args.output_dir, gene_name, amplifier)
     os.makedirs(amp_dir, exist_ok=True)
     with open(os.path.join(amp_dir, f'{gene_name}_{amplifier}_summary.txt'), 'w') as f:
-        f.write(f'HCR-prober v1.9.5 Summary for: {gene_name} | Amplifier: {amplifier}\n{'='*70}\n')
+        f.write(f'HCR-prober v{__version__} Summary for: {gene_name} | Amplifier: {amplifier}\n{'='*70}\n')
         if not probes: f.write('\n*** PIPELINE FAILED TO PRODUCE ANY FINAL PROBES ***\n')
         f.write('\n--- Run Parameters ---\n')
         f.write(f'  Target Sequence Length: {len(sequence)} nt\n')
         f.write(f'  Min Probe Distance: {args.min_probe_distance} nt\n')
         f.write(f'  GC Range: {args.min_gc}-{args.max_gc} %\n')
         f.write(f'  Tm Range: {args.min_tm}-{args.max_tm} C\n')
+        na = getattr(args, 'na_conc', 50)
+        mg = getattr(args, 'mg_conc', 0)
+        dntps = getattr(args, 'dntp_conc', 0)
+        dna = getattr(args, 'dna_conc', 25)
+        if na != 50 or mg != 0 or dntps != 0 or dna != 25:
+            f.write(f'  Na+ conc: {na} mM | Mg2+ conc: {mg} mM | dNTP conc: {dntps} mM | DNA conc: {dna} nM\n')
         if args.blast_ref:
             f.write(f'  BLAST Reference: {os.path.basename(args.blast_ref)}\n')
             f.write(f'  Discovery Bitscore Cutoff: {args.min_bitscore}\n')
@@ -54,10 +82,18 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         audit_key_map = {
             'initial_windows': 'Initial Windows', 'after_5prime_skip': 'After 5\' Skip', 'after_region_mask': 'After Region Masking', 'after_seq_mask': 'After Sequence Masking',
             'after_thermo_filter': 'Thermo-stable Candidates', 'after_gc_balance_filter': 'After GC Balance', 'after_tm_filter': 'After Tm',
-            'after_blast_filter': 'Specific Candidates (Post-BLAST)', 'after_spacing_filter': 'Spatially-Diverse Blueprint Probes',
+            'after_structure_filter': 'After Structure Filter',
+            'after_blast_filter': 'Specific Candidates (Post-BLAST)', 'after_negative_blast': 'After Negative BLAST Screen',
+            'after_spacing_filter': 'Spatially-Diverse Blueprint Probes',
             'after_subsampling': 'After Final Subsampling'
         }
-        ordered_keys = ['initial_windows', 'after_5prime_skip', 'after_region_mask', 'after_seq_mask', 'after_thermo_filter', 'after_gc_balance_filter', 'after_tm_filter', 'after_blast_filter', 'after_spacing_filter', 'after_subsampling']
+        ordered_keys = [
+            'initial_windows', 'after_5prime_skip', 'after_region_mask', 'after_seq_mask',
+            'after_thermo_filter', 'after_gc_balance_filter', 'after_tm_filter',
+            'after_structure_filter',
+            'after_blast_filter', 'after_negative_blast',
+            'after_spacing_filter', 'after_subsampling'
+        ]
         for key in ordered_keys:
             if key in audit_trail: f.write(f'  {audit_trail[key]:>7} {audit_key_map.get(key, key)}\n')
         f.write(f'  ---------------------------\n  {len(probes):>7} Final Probe Pairs\n')
@@ -71,7 +107,8 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         pd.DataFrame(order_data).to_excel(os.path.join(amp_dir, f'{gene_name}_{amplifier}_order.xlsx'), index=False)
         with open(os.path.join(amp_dir, f'{gene_name}_{amplifier}_probes.fasta'), 'w') as f:
             for p in sorted(probes, key=lambda x: x['pair_num']): f.write(f'>{p['pair_id']}_A\n{p['probe_dn_final']}\n>{p['pair_id']}_B\n{p['probe_up_final']}\n')
-        visualization.generate_svg_probe_map(probes, len(sequence), amplifier, gene_name, os.path.join(amp_dir, f'{gene_name}_{amplifier}_probe_map.svg'))
+        visualization.generate_svg_probe_map(probes, len(sequence), amplifier, gene_name, os.path.join(amp_dir, f'{gene_name}_{amplifier}_probe_map.svg'), window_size=getattr(args, 'window_size', 52))
+        write_details_csv(probes, os.path.join(amp_dir, f'{gene_name}_{amplifier}_details.csv'))
     else: logger.warning(f'No final probes for {gene_name} with amplifier {amplifier}. Report created.')
 
 def _write_blast_report_section(f, blast_reports, final_probes):
@@ -84,7 +121,6 @@ def _write_blast_report_section(f, blast_reports, final_probes):
     f.write('\n' + '='*70 + '\n--- DETAILED BLAST REPORT ---\n' + '='*70 + '\n')
     for screen_type, report in blast_reports.items():
         f.write(f'\n--- {screen_type.upper()} SCREEN ---\n')
-        pd.set_option('display.max_rows', None); pd.set_option('display.width', 1000); pd.set_option('display.max_colwidth', None)
 
         if 'strong_hits' in report and not report['strong_hits'].empty:
             f.write('\n[+] Plausible BLAST Hits. Probes in the final set are marked with a *.\n\n')
@@ -97,7 +133,7 @@ def _write_blast_report_section(f, blast_reports, final_probes):
             cols = ['SELECTED'] + [col for col in df_hits.columns if col != 'SELECTED']
             df_hits = df_hits[cols]
 
-            # **FIX v1.9.6**: Use to_string(index=False) to fix table formatting.
-            f.write(df_hits.to_string(index=False) + '\n')
+            with pd.option_context('display.max_rows', None, 'display.width', 1000, 'display.max_colwidth', None):
+                f.write(df_hits.to_string(index=False) + '\n')
         else:
             f.write('\n[+] No BLAST hits passed discovery thresholds.\n')
