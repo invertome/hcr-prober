@@ -1,11 +1,11 @@
 
-# HCR-prober v1.9.6: Toolkit for HCR Probe Design
+# HCR-prober v1.10.0: Toolkit for HCR Probe Design
 
 ## Overview
 
 HCR-prober is a powerful, flexible, and user-friendly command-line pipeline for designing DNA probes for third-generation *in situ* Hybridization Chain Reaction (HCR v3.0). It is a professional-grade bioinformatics platform that automates the tedious and critical process of selecting dozens of probe pairs that tile across a target transcript. It provides robust filtering options to ensure high specificity and optimal performance in a wide range of model and non-model organisms.
 
-This toolkit is designed for molecular biologists and bioinformaticians who need to generate reliable, high-quality probe sets for single or multiple gene targets, including complex scenarios involving gene isoforms. This version fixes a critical bug and improves the clarity of the output visualizations.
+This toolkit is designed for molecular biologists and bioinformaticians who need to generate reliable, high-quality probe sets for single or multiple gene targets, including complex scenarios involving gene isoforms.
 
 ## Key Features
 
@@ -22,6 +22,10 @@ This toolkit is designed for molecular biologists and bioinformaticians who need
 - **NEW: Highlighted Probes in BLAST Report:** The detailed BLAST report now includes a `SELECTED` column, marking probes in the final set with an asterisk (`*`) for easy traceability.
 - **IMPROVED: Clearer Probe Map Visualization:** The output SVG probe map renders all probes on a single side of the transcript for an intuitive view of tiling and density.
 - **Extensible Amplifier System:** Add new HCR amplifiers to the system by creating a simple JSON file—no code changes required.
+- **NEW: Secondary Structure Filtering:** Screens probe candidates for hairpins, homodimers, and heterodimers using primer3-py thermodynamic calculations. Probes that form stable secondary structures are automatically rejected.
+- **NEW: Negative BLAST Screen:** An optional second-pass BLAST screen that rejects probes with strong off-target hits to non-target transcripts. Auto-derives the negative set from your reference transcriptome.
+- **NEW: Detailed Thermodynamic CSV Export:** Every run now produces a `_details.csv` file with per-probe GC%, Tm, and secondary structure delta-G values for full auditability.
+- **NEW: Configurable Hybridization Conditions:** Customize Na+, Mg2+, dNTP, and DNA oligo concentrations for Tm calculations to match your experimental conditions.
 
 ---
 
@@ -31,8 +35,8 @@ The only external dependency you need to install yourself is **NCBI BLAST+**. Th
 
 Other Python dependencies installed automatically by HCR-prober:
 ```
-'biopython>=1.79', 'pandas>=1.3.0', 'openpyxl>=3.0.0',
-'numpy>=1.20.0', 'matplotlib>=3.3.0', 'PyYAML>=5.4.0', 'loguru>=0.5.3'
+'biopython>=1.80', 'pandas>=1.3.0', 'openpyxl>=3.0.0',
+'numpy>=1.20.0', 'matplotlib>=3.3.0', 'PyYAML>=5.4.0', 'loguru>=0.5.3', 'primer3-py>=2.0.0'
 ```
 
 **On Linux (Ubuntu/Debian):**
@@ -55,10 +59,10 @@ You can install HCR-prober from the provided `.zip` file or by cloning the Git r
 
 ### Method A: From a ZIP file
 
-1.  Unzip the project file (`HCR-prober-project-v1.9.6.zip`).
+1.  Unzip the project file.
 2.  Navigate into the newly created directory.
     ```bash
-    cd HCR-prober-project-v1.9.6
+    cd hcr-prober
     ```
 3.  Install the package using `pip`. The `.` tells pip to install from the current directory.
     ```bash
@@ -98,13 +102,15 @@ Understanding the pipeline's logic is key to effective troubleshooting. When you
     - *GC Content Filter:* Rejects candidates whose overall GC% is outside the specified range.
     - *GC Balance Filter:* Rejects candidates where the two 25bp arms have a large difference in GC content.
     - *Melting Temperature (Tm) Filter:* Rejects candidates where either arm's Tm is outside the specified range.
+    - *Secondary Structure Filter (v1.10.0):* Rejects candidates where either arm forms a stable hairpin or homodimer, or the two arms form a stable heterodimer (using primer3-py thermodynamic calculations).
 4.  **Specificity Screening (`blast_wrapper.py`):**
     - The target-binding region (52bp) of every passing probe is queried against a BLAST database built from your reference transcriptome (`--blast-ref`).
     - Results are filtered by your specified cutoffs (`--min-bitscore`, `--max-evalue`).
+    - *Negative BLAST Screen (v1.10.0):* Optionally, probes are screened against non-target transcripts and rejected if they have strong off-target hits.
 5.  **Optimal Spacing & Selection:** A dynamic programming algorithm selects the **maximum possible number of non-overlapping probes** from the specific candidates, honoring the `--min-probe-distance` parameter.
 6.  **Formatting:** Passing candidates are assigned a unique ID (e.g., `MyGene_pair_1`) and combined with the specified HCR amplifier sequences.
 7.  **Final Subsampling:** If more probes pass all filters than requested with `--max-probes`, the script selects a final, evenly-spaced subset.
-8.  **Output Generation (`file_io.py`):** The final probe set is written to user-friendly output files, including an Excel order sheet, the improved SVG probe map, and a detailed summary report.
+8.  **Output Generation (`file_io.py`):** The final probe set is written to user-friendly output files, including an Excel order sheet, the improved SVG probe map, a detailed summary report, and a thermodynamic details CSV.
 
 ---
 
@@ -130,10 +136,24 @@ This is the primary command for designing probes against one or more transcripts
 - `--min-tm`, `--max-tm`: Set a required melting temperature (Tm) range. **Disabled by default.**
 - `--max-homopolymer`: The maximum allowed run of a single base. Defaults to `4`.
 
+#### **Secondary Structure Arguments (v1.10.0)**
+- `--max-hairpin-dg`: Maximum allowed hairpin delta-G in kcal/mol. Probes with stronger hairpins (more negative) are rejected. Defaults to `-3.0`.
+- `--max-homodimer-dg`: Maximum allowed homodimer delta-G. Defaults to `-5.0`.
+- `--max-heterodimer-dg`: Maximum allowed heterodimer delta-G between probe arms. Defaults to `-5.0`.
+
+#### **Hybridization Condition Arguments (v1.10.0)**
+- `--na-conc`: Na+ concentration in mM for Tm calculations. Defaults to `50.0`.
+- `--mg-conc`: Mg2+ concentration in mM. Defaults to `0.0`.
+- `--dntp-conc`: dNTP concentration in mM. Defaults to `0.0`.
+- `--dna-conc`: DNA oligo concentration in nM. Defaults to `25.0`.
+
 #### **BLAST Specificity Arguments**
 - `--blast-ref`: **(Highly Recommended)** Path to your reference transcriptome in FASTA format.
 - `--min-bitscore`: The minimum BLAST bitscore for a hit to be considered 'strong'. Defaults to `75`.
 - `--max-evalue`: The maximum BLAST e-value for a hit to be considered 'strong'. Defaults to `1e-10`.
+- `--blast-negative-ref`: (Optional) Path to a FASTA file for negative BLAST screening. If omitted but `--blast-ref` is provided, the negative set is auto-derived from the reference by excluding the target transcript.
+- `--negative-bitscore`: Bitscore threshold for the negative screen. Defaults to the same value as `--min-bitscore`.
+- `--negative-evalue`: E-value threshold for the negative screen. Defaults to the same value as `--max-evalue`.
 
 ---
 
