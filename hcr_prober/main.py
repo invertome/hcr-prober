@@ -61,7 +61,7 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--max-heterodimer-dg', type=float, default=-5.0, help='Max heterodimer delta-G (kcal/mol).')
     blast_group.add_argument('--blast-ref', help='Path to FASTA for positive BLAST screen.')
     blast_group.add_argument('--positive-selection-strategy', choices=['any-strong-hit', 'best-coverage', 'specific-id'], default='any-strong-hit', help='Global BLAST strategy for the design command.')
-    blast_group.add_argument('--target-transcript-id', help='The exact transcript ID to target for the \'specific-id\' strategy.')
+    blast_group.add_argument('--target-transcript-id', nargs='+', default=[], help='One or more transcript IDs to target. Used by the specific-id strategy AND added to the negative-screen exclusion set so paralogs/antisense-contigs of the target gene are not treated as off-targets.')
     blast_group.add_argument('--min-bitscore', type=float, default=75.0); blast_group.add_argument('--max-evalue', type=float, default=1e-10)
     blast_group.add_argument('--blast-extra-args', type=str, default='')
     blast_group.add_argument('--blast-negative-ref', type=str, default=None, help='FASTA for negative BLAST screen.')
@@ -79,8 +79,11 @@ def create_probe_blueprint(gene_name, seq, temp_dir, args):
     # Negative BLAST screen
     if args.blast_ref or getattr(args, 'blast_negative_ref', None):
         target_ids = {gene_name}
-        if hasattr(args, 'target_transcript_id') and args.target_transcript_id:
-            target_ids.add(args.target_transcript_id)
+        ttid = getattr(args, 'target_transcript_id', None) or []
+        # Backwards-compat: accept either str or list/tuple
+        if isinstance(ttid, str):
+            ttid = [ttid]
+        target_ids.update(ttid)
         if hasattr(args, '_isoform_ids'):
             target_ids.update(args._isoform_ids)
         specific_probes, neg_report = blast_wrapper.run_negative_screen(
@@ -132,7 +135,8 @@ def main():
         check_dependencies()
         strat = getattr(args, 'positive_selection_strategy', None)
         common_strat = getattr(args, 'common_strategy', None)
-        if (strat == 'specific-id' or common_strat == 'specific-id') and not args.target_transcript_id: logger.critical('FATAL: \'specific-id\' strategy requires --target-transcript-id.'); sys.exit(1)
+        unique_strat = getattr(args, 'unique_strategy', None)
+        if (strat == 'specific-id' or common_strat == 'specific-id' or unique_strat == 'specific-id') and not args.target_transcript_id: logger.critical('FATAL: \'specific-id\' strategy requires --target-transcript-id.'); sys.exit(1)
         for amp in args.amplifier:
             if amp not in args.amplifiers: logger.critical(f'Amplifier \'{amp}\' not found.'); sys.exit(1)
         os.makedirs(args.output_dir, exist_ok=True)

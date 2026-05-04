@@ -69,10 +69,10 @@ def filter_probes_by_blast(probes, args, temp_dir):
     passed_probes_set = set()
     if strategy == 'any-strong-hit': passed_probes_set = set(plausible_hits['pair_id'])
     elif strategy == 'specific-id':
-        target_id = args.target_transcript_id
-        hits_on_target = plausible_hits[plausible_hits['hit_id'] == target_id]
+        target_ids = args.target_transcript_id if isinstance(args.target_transcript_id, (list, tuple)) else [args.target_transcript_id]
+        hits_on_target = plausible_hits[plausible_hits['hit_id'].isin(target_ids)]
         probes_hitting_target = set(hits_on_target['pair_id'])
-        hits_off_target = plausible_hits[plausible_hits['hit_id'] != target_id]
+        hits_off_target = plausible_hits[~plausible_hits['hit_id'].isin(target_ids)]
         passed_probes_set = probes_hitting_target - set(hits_off_target['pair_id'])
     elif strategy == 'best-coverage':
         transcript_scores = []
