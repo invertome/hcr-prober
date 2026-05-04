@@ -1,5 +1,6 @@
 import pytest
 import argparse
+from Bio.Seq import Seq
 from hcr_prober.prober import generate_thermo_candidates
 from hcr_prober.prober import select_spatially_diverse_probes
 from hcr_prober.prober import filter_by_structure
@@ -102,6 +103,42 @@ def test_structure_filter_rejects_hairpin():
     }]
     result = filter_by_structure(candidates, args)
     assert len(result) == 0, f"Expected hairpin rejection but got {len(result)} probes through"
+
+def test_per_arm_gc_filter_rejects_unbalanced_arm():
+    """Audit C4: per-arm GC range filter.
+
+    A 52-mer with 40% total GC but 32%/52% per-arm split must be rejected
+    when min_gc=40, since each 25-nt arm hybridises independently.
+    """
+    arm1 = 'GACAGCATAGATAGATAGATAGATA'
+    spacer = 'AT'
+    arm2 = 'CGATCGATCGATCGATCGATCGATC'
+    assert sum(c in 'GC' for c in arm1) == 8
+    assert sum(c in 'GC' for c in arm2) == 13
+    window = arm1 + spacer + arm2
+    input_seq = str(Seq(window).reverse_complement())
+    args = make_args(min_gc=40.0, max_gc=60.0, max_gc_diff=30.0)
+    candidates, audit = generate_thermo_candidates(input_seq, args)
+    assert len(candidates) == 0, (
+        f'Expected zero candidates because arm 1 GC=32% is below min_gc=40, '
+        f'but got {len(candidates)}. Audit: {audit}'
+    )
+
+
+def test_per_arm_gc_filter_accepts_balanced_arms():
+    """A 52-mer with 52% GC in both arms should pass at min_gc=40."""
+    arm1 = 'CGATCGATCGATCGATCGATCGATC'
+    spacer = 'AT'
+    arm2 = 'CGATCGATCGATCGATCGATCGATC'
+    window = arm1 + spacer + arm2
+    input_seq = str(Seq(window).reverse_complement())
+    args = make_args(min_gc=40.0, max_gc=60.0, max_gc_diff=10.0)
+    candidates, audit = generate_thermo_candidates(input_seq, args)
+    assert len(candidates) == 1, (
+        f'Expected 1 candidate (both arms 52% GC, in 40-60), got {len(candidates)}. '
+        f'Audit: {audit}'
+    )
+
 
 def test_structure_filter_stores_dg_values():
     """Structure filter should store dG values in candidates that pass."""

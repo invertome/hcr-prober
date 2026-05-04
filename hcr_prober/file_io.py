@@ -87,7 +87,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         f.write('\n\n--- Filtering Funnel (Blueprint Architecture) ---\n')
         audit_key_map = {
             'initial_windows': 'Initial Windows', 'after_5prime_skip': 'After 5\' Skip', 'after_region_mask': 'After Region Masking', 'after_seq_mask': 'After Sequence Masking',
-            'after_thermo_filter': 'Thermo-stable Candidates', 'after_gc_balance_filter': 'After GC Balance', 'after_tm_filter': 'After Tm',
+            'after_thermo_filter': 'After Homopolymer Filter', 'after_gc_balance_filter': 'After Per-Arm GC + Balance', 'after_tm_filter': 'After Tm',
             'after_structure_filter': 'After Structure Filter',
             'after_blast_filter': 'Specific Candidates (Post-BLAST)', 'after_negative_blast': 'After Negative BLAST Screen',
             'after_spacing_filter': 'Spatially-Diverse Blueprint Probes',

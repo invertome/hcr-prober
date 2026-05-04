@@ -33,13 +33,15 @@ def generate_thermo_candidates(sequence, args):
             mask_pattern = re.compile('|'.join(re.escape(m.upper()) for m in mask_sequences))
             all_windows = [w for w in all_windows if not mask_pattern.search(w['window_sequence'].upper())]
         audit['after_seq_mask'] = len(all_windows)
-    thermo_passed = [w for w in all_windows if not su.has_homopolymer(w['window_sequence'], args.max_homopolymer) and args.min_gc <= tu.calculate_gc_content(w['window_sequence']) <= args.max_gc]
+    thermo_passed = [w for w in all_windows if not su.has_homopolymer(w['window_sequence'], args.max_homopolymer)]
     audit['after_thermo_filter'] = len(thermo_passed)
     balanced_gc_passed = []
     for w in thermo_passed:
         p1, p2 = w['window_sequence'][0:args.probe_len], w['window_sequence'][args.probe_len + args.spacer_len:]
         gc1, gc2 = tu.calculate_gc_content(p1), tu.calculate_gc_content(p2)
-        if abs(gc1 - gc2) <= args.max_gc_diff:
+        if (args.min_gc <= gc1 <= args.max_gc
+                and args.min_gc <= gc2 <= args.max_gc
+                and abs(gc1 - gc2) <= args.max_gc_diff):
             w['probe_up_target'], w['probe_dn_target'] = p2, p1
             w['gc_dn'], w['gc_up'] = gc1, gc2
             balanced_gc_passed.append(w)
