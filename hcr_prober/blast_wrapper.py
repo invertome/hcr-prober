@@ -1,9 +1,13 @@
 # hcr_prober/blast_wrapper.py
-import subprocess, os, sys, pandas as pd, tempfile
+import subprocess, os, sys, hashlib, pandas as pd, tempfile
 from loguru import logger
 def create_blast_db(ref_fasta, db_path):
     if not ref_fasta: return None
-    db_name_prefix, db_dir = os.path.splitext(os.path.basename(ref_fasta))[0], db_path if db_path else tempfile.gettempdir()
+    abs_ref = os.path.abspath(ref_fasta)
+    base = os.path.splitext(os.path.basename(ref_fasta))[0]
+    path_hash = hashlib.sha256(abs_ref.encode('utf-8')).hexdigest()[:8]
+    db_name_prefix = f'{base}_{path_hash}'
+    db_dir = db_path if db_path else tempfile.gettempdir()
     db_name = os.path.join(db_dir, db_name_prefix); db_check_file = f'{db_name}.nsq'
     if os.path.exists(db_check_file) and os.path.getmtime(ref_fasta) < os.path.getmtime(db_check_file): return db_name
     logger.info(f'Creating/updating BLAST database for {os.path.basename(ref_fasta)}...')
