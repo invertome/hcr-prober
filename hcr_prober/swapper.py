@@ -11,18 +11,24 @@ def _swap_amplifiers_on_file(input_path, output_path, args, amplifiers):
     new_upspc = su.resolve_iupac_spacer(new_amp_data['upspc']); new_dnspc = su.resolve_iupac_spacer(new_amp_data['dnspc'])
     initiator_map = {data['up']: ('up', data.get('upspc', '')) for data in amplifiers.values()}
     initiator_map.update({data['dn']: ('dn', data.get('dnspc', '')) for data in amplifiers.values()})
+    PROBE_ARM_LEN = 25
     new_sequences = []
     for seq in df['Sequence']:
         seq_upper, found = seq.upper(), False
         for old_initiator, (initiator_type, old_spacer_iupac) in initiator_map.items():
             spacer_len = len(old_spacer_iupac)
-            if seq_upper.startswith(old_initiator.upper()):
+            expected_len = len(old_initiator) + spacer_len + PROBE_ARM_LEN
+            if len(seq) != expected_len:
+                continue  # length must equal handle + spacer + 25-nt arm; otherwise not a v3 probe
+            if initiator_type == 'up' and seq_upper.startswith(old_initiator.upper()):
                 target_seq = seq[len(old_initiator) + spacer_len:]
                 new_sequences.append(f'{new_up}{new_upspc}{target_seq}'); found = True; break
-            elif seq_upper.endswith(old_initiator.upper()):
+            if initiator_type == 'dn' and seq_upper.endswith(old_initiator.upper()):
                 target_seq = seq[:-(len(old_initiator) + spacer_len)]
                 new_sequences.append(f'{target_seq}{new_dnspc}{new_dn}'); found = True; break
-        if not found: new_sequences.append(seq)
+        if not found:
+            new_sequences.append(seq)
+            logger.warning(f'Could not match any known amplifier handle to probe (len={len(seq)}); leaving untouched: {seq[:50]}{"..." if len(seq) > 50 else ""}')
     df['Sequence'] = new_sequences
     old_pool_name = df['Pool name'][0]
     try:
