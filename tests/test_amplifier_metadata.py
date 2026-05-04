@@ -68,3 +68,27 @@ def test_amplifiers_still_loadable_after_rename():
     assert {'B1', 'B2', 'B3', 'B4', 'B5', 'B7', 'B9'}.issubset(set(amps.keys()))
     for amp_id, amp in amps.items():
         assert 'up' in amp and 'dn' in amp
+
+
+def test_amplifier_load_order_is_deterministic():
+    """load_amplifiers iterates over glob.glob output and inserts into a dict
+    in that order. Filesystem glob ordering is not guaranteed across machines,
+    so we sort to keep the loaded amplifier dict order stable.
+    """
+    from hcr_prober.file_io import load_amplifiers
+    import hcr_prober
+    pkg = os.path.dirname(hcr_prober.__file__)
+    a = load_amplifiers(pkg)
+    b = load_amplifiers(pkg)
+    assert list(a.keys()) == list(b.keys()), (
+        f'amplifier load order differs across calls: {list(a.keys())} vs {list(b.keys())}'
+    )
+    # And we expect them to be sorted lexicographically across files
+    # (HCR_v3_Choi_2018.json comes before HCR_v3_Wang_2020.json alphabetically,
+    # so B1-B5 should appear before B7/B9).
+    keys = list(a.keys())
+    b1_idx = keys.index('B1')
+    b7_idx = keys.index('B7')
+    assert b1_idx < b7_idx, (
+        f'B1 should appear before B7 (Choi file sorts before Wang file): {keys}'
+    )

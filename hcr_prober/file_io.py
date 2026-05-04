@@ -57,7 +57,7 @@ def load_amplifiers(pkg_path):
     if not os.path.isdir(plugin_dir):
         logger.error(f'Amplifier dir not found: {plugin_dir}')
         return {}
-    for pf in glob.glob(os.path.join(plugin_dir, '*.json')):
+    for pf in sorted(glob.glob(os.path.join(plugin_dir, '*.json'))):
         try:
             # **FIX v1.9.5**: Corrected syntax for try/with block
             with open(pf, 'r') as f:

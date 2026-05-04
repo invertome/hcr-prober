@@ -45,7 +45,7 @@ def swap_amplifiers(args, amplifiers):
     if args.new_amplifier not in amplifiers: logger.error(f'New amplifier \'{args.new_amplifier}\' not found.'); return
     os.makedirs(args.output_dir, exist_ok=True)
     if os.path.isdir(args.input_probes):
-        files_to_process = glob.glob(os.path.join(args.input_probes, '**', '*.xlsx'), recursive=True)
+        files_to_process = sorted(glob.glob(os.path.join(args.input_probes, '**', '*.xlsx'), recursive=True))
         for file_path in files_to_process:
             base_name = os.path.splitext(os.path.basename(file_path))[0]
             output_path = os.path.join(args.output_dir, f'{base_name}_swapped_to_{args.new_amplifier}.xlsx')
