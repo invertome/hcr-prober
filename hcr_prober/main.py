@@ -7,6 +7,25 @@ from hcr_prober import __version__
 
 def setup_logging(): logger.remove(); logger.add(sys.stderr, format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>')
 
+
+BUFFER_PRESETS = {
+    'hcr-5xssc': {'na_conc': 825.0, 'mg_conc': 0.0, 'formamide_pct': 50.0},
+    'pcr':       {'na_conc': 50.0,  'mg_conc': 0.0, 'formamide_pct': 0.0},
+}
+
+
+def apply_buffer_preset(args):
+    """Fill in unset ionic-condition values from --buffer-preset.
+
+    Individual flags (--na-conc, --mg-conc, --formamide-pct) win over the
+    preset; the preset only fills slots the user left at None.
+    """
+    preset_name = getattr(args, 'buffer_preset', 'hcr-5xssc')
+    preset = BUFFER_PRESETS.get(preset_name, BUFFER_PRESETS['hcr-5xssc'])
+    for key, val in preset.items():
+        if getattr(args, key, None) is None:
+            setattr(args, key, val)
+
 def check_dependencies():
     if not shutil.which('blastn') or not shutil.which('makeblastdb'):
         logger.critical('FATAL ERROR: NCBI BLAST+ is not installed or not in your system\'s PATH.'); sys.exit(1)
@@ -21,6 +40,8 @@ def add_shared_design_args(parser):
     proc_group.add_argument('--force', action='store_true', help='Force re-run and ignore cached results.')
     proc_group.add_argument('--db-path', help='Permanent directory to store/find BLAST databases.')
     proc_group.add_argument('--seed', type=int, default=0, help='RNG seed for deterministic output (default: 0).')
+    proc_group.add_argument('--buffer-preset', choices=['hcr-5xssc', 'pcr'], default='hcr-5xssc',
+                            help='Convenience: sets na/mg/formamide together. Explicit flags override.')
     design_group.add_argument('--amplifier', nargs='+', required=True, help='One or more HCR amplifier IDs.')
     design_group.add_argument('--max-probes', type=int, default=33, help='Maximum number of probe pairs to select.')
     design_group.add_argument('--skip-5prime', type=int, default=50, help='Nucleotides to exclude at the 5\' end.')
@@ -30,11 +51,11 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--min-gc', type=float, default=40.0); thermo_group.add_argument('--max-gc', type=float, default=60.0)
     thermo_group.add_argument('--min-tm', type=float, default=40.0); thermo_group.add_argument('--max-tm', type=float, default=55.0)
     thermo_group.add_argument('--max-homopolymer', type=int, default=4); thermo_group.add_argument('--max-gc-diff', type=float, default=15.0)
-    thermo_group.add_argument('--na-conc', type=float, default=825.0, help='Na+ concentration in mM. Default 825 = 5xSSC (HCR hyb buffer). Use 50 for PCR conditions.')
-    thermo_group.add_argument('--mg-conc', type=float, default=0.0, help='Mg2+ concentration in mM.')
+    thermo_group.add_argument('--na-conc', type=float, default=None, help='Na+ concentration in mM. Defaults from --buffer-preset (hcr-5xssc=825, pcr=50).')
+    thermo_group.add_argument('--mg-conc', type=float, default=None, help='Mg2+ concentration in mM. Defaults from --buffer-preset.')
     thermo_group.add_argument('--dntp-conc', type=float, default=0.0, help='dNTP concentration in mM.')
     thermo_group.add_argument('--dna-conc', type=float, default=25.0, help='DNA oligo concentration in nM.')
-    thermo_group.add_argument('--formamide-pct', type=float, default=50.0, help='Formamide percent in hyb buffer (HCR uses 50). Reduces Tm by 0.65 C per percent.')
+    thermo_group.add_argument('--formamide-pct', type=float, default=None, help='Formamide percent in hyb buffer. Defaults from --buffer-preset (hcr-5xssc=50, pcr=0).')
     thermo_group.add_argument('--max-hairpin-dg', type=float, default=-3.0, help='Max hairpin delta-G (kcal/mol).')
     thermo_group.add_argument('--max-homodimer-dg', type=float, default=-5.0, help='Max homodimer delta-G (kcal/mol).')
     thermo_group.add_argument('--max-heterodimer-dg', type=float, default=-5.0, help='Max heterodimer delta-G (kcal/mol).')
@@ -100,6 +121,7 @@ def main():
 
     parser.set_defaults(**config)
     args = parser.parse_args()
+    apply_buffer_preset(args)
     seed = getattr(args, 'seed', 0)
     random.seed(seed)
     np.random.seed(seed)

@@ -22,11 +22,14 @@ def _build_design_parser():
 
 
 def test_na_conc_default_is_5xssc():
-    """5xSSC is approximately 825 mM Na+ (300 mM NaCl + 30 mM Na-citrate, 5x)."""
+    """5xSSC is approximately 825 mM Na+ (300 mM NaCl + 30 mM Na-citrate, 5x).
+    The default --buffer-preset is hcr-5xssc, so after preset resolution Na = 825."""
+    from hcr_prober.main import apply_buffer_preset
     p = _build_design_parser()
     args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1'])
+    apply_buffer_preset(args)
     assert args.na_conc == 825.0, (
-        f'Default --na-conc should be 825 mM (5xSSC), got {args.na_conc}'
+        f'Default --na-conc should resolve to 825 mM (5xSSC), got {args.na_conc}'
     )
 
 
@@ -87,12 +90,53 @@ def test_filter_by_structure_passes_ionic_strength_to_primer3(monkeypatch):
 # --- Task 1.3: formamide Tm correction --------------------------------------
 def test_formamide_default_is_50pct():
     """HCR hybridisation buffer is typically 5xSSC + 50% formamide; default
-    --formamide-pct should reflect that."""
+    --buffer-preset hcr-5xssc resolves --formamide-pct to 50."""
+    from hcr_prober.main import apply_buffer_preset
     p = _build_design_parser()
     args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1'])
+    apply_buffer_preset(args)
     assert args.formamide_pct == 50.0, (
-        f'Default --formamide-pct should be 50 (HCR), got {args.formamide_pct}'
+        f'Default --formamide-pct should resolve to 50 (HCR), got {args.formamide_pct}'
     )
+
+
+def test_buffer_preset_pcr_yields_pcr_ionic_values():
+    """--buffer-preset pcr should populate na/mg/formamide as PCR conditions
+    (50 mM Na, 0 Mg, 0% formamide), provided the user did NOT pass those
+    individual flags explicitly.
+    """
+    from hcr_prober.main import apply_buffer_preset
+    p = _build_design_parser()
+    args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1',
+                          '--buffer-preset', 'pcr'])
+    apply_buffer_preset(args)
+    assert args.na_conc == 50.0
+    assert args.mg_conc == 0.0
+    assert args.formamide_pct == 0.0
+
+
+def test_buffer_preset_hcr_5xssc_yields_hcr_ionic_values():
+    """--buffer-preset hcr-5xssc (the default) should populate Na=825, Mg=0,
+    formamide=50."""
+    from hcr_prober.main import apply_buffer_preset
+    p = _build_design_parser()
+    args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1'])
+    apply_buffer_preset(args)
+    assert args.na_conc == 825.0
+    assert args.formamide_pct == 50.0
+
+
+def test_explicit_flag_overrides_buffer_preset():
+    """If the user passes --na-conc explicitly, it should win over the preset."""
+    from hcr_prober.main import apply_buffer_preset
+    p = _build_design_parser()
+    args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1',
+                          '--buffer-preset', 'hcr-5xssc',
+                          '--na-conc', '100'])
+    apply_buffer_preset(args)
+    assert args.na_conc == 100.0
+    # formamide should still come from preset since user did not override it
+    assert args.formamide_pct == 50.0
 
 
 def test_formamide_correction_lowers_tm_by_065_per_pct():
