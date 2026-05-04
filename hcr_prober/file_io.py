@@ -9,8 +9,16 @@ from hcr_prober import __version__
 
 def read_fasta(file_path):
     if not file_path: return {}
-    try: return {rec.id: str(rec.seq) for rec in SeqIO.parse(file_path, 'fasta')}
-    except FileNotFoundError: logger.critical(f'FASTA not found: {file_path}'); sys.exit(1)
+    try:
+        seqs = {rec.id: str(rec.seq) for rec in SeqIO.parse(file_path, 'fasta')}
+    except FileNotFoundError:
+        logger.critical(f'FASTA not found: {file_path}'); sys.exit(1)
+    if not seqs:
+        raise ValueError(f"FASTA '{file_path}' contains no sequences (empty or malformed)")
+    empty_ids = [sid for sid, s in seqs.items() if not s]
+    if empty_ids:
+        raise ValueError(f"FASTA '{file_path}' has empty sequence(s): {empty_ids[:5]}")
+    return seqs
 
 def load_amplifiers(pkg_path):
     amplifiers, plugin_dir = {}, os.path.join(pkg_path, 'config', 'amplifiers')
