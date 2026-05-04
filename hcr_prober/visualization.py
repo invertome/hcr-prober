@@ -7,7 +7,12 @@ def generate_svg_probe_map(probes, seq_len, amp, gene, out_path, window_size=52)
     track_height = 10
     # Position the track lower in the canvas.
     track_y = height - padding - 40
-    colors = ["#3498db", "#e74c3c", "#2ecc71", "#f1c40f", "#9b59b6", "#1abc9c"]
+    # Generate one distinct hue per probe via even HSL stepping; saturation
+    # and lightness chosen for good contrast on white. With N probes, hues
+    # are spaced at 360/N degrees so adjacent probes are visually
+    # distinguishable even with 33 pairs (the default --max-probes).
+    n_probes = max(len(probes), 1)
+    colors = [f'hsl({(i * 360 // n_probes) % 360}, 70%, 50%)' for i in range(n_probes)]
 
     svg = [f'<svg width="{width}" height="{height}" xmlns="http://www.w3.org/2000/svg">']
     svg.append('<style>.title { font: bold 20px sans-serif; } .label { font: 12px sans-serif; }</style>')
@@ -26,7 +31,7 @@ def generate_svg_probe_map(probes, seq_len, amp, gene, out_path, window_size=52)
         probe_width = window_size * scale
         # **UPDATED v1.9.5**: Draw all probes above the track, not alternating.
         probe_y = track_y - track_height
-        color = colors[i % len(colors)]
+        color = colors[i]
         svg.append(f'<rect x="{start_px}" y="{probe_y}" width="{max(1, probe_width)}" height="{track_height}" fill="{color}">')
         # Add a tooltip to each probe rectangle
         svg.append(f'  <title>Pair {probe["pair_num"]}\nStart: {probe["start_pos_on_sense"]}</title>')
