@@ -107,22 +107,35 @@ def select_spatially_diverse_probes(probes_to_filter, args):
     return selected_probes
 
 def filter_by_structure(candidates, args):
-    """Filter probes by secondary structure: hairpins, homodimers, heterodimers."""
+    """Filter probes by secondary structure: hairpins, homodimers, heterodimers.
+
+    primer3 calls receive HCR-buffer ionic strength (mv = Na+, dv = Mg2+,
+    dntp, dna) plus temp_c=37 (typical HCR hyb temperature). Without these,
+    primer3 falls back to PCR-like defaults (50 mM Na+, 0 Mg2+, 50 nM oligo)
+    and the dG values do not reflect actual HCR conditions.
+    """
     max_hp = getattr(args, 'max_hairpin_dg', -3.0)
     max_homo = getattr(args, 'max_homodimer_dg', -5.0)
     max_hetero = getattr(args, 'max_heterodimer_dg', -5.0)
+    p3_kwargs = dict(
+        mv_conc=getattr(args, 'na_conc', 825.0),
+        dv_conc=getattr(args, 'mg_conc', 0.0),
+        dntp_conc=getattr(args, 'dntp_conc', 0.0),
+        dna_conc=getattr(args, 'dna_conc', 25.0),
+        temp_c=37.0,
+    )
     passed = []
     for w in candidates:
         dn, up = w['probe_dn_target'], w['probe_up_target']
-        hp_dn = primer3.calc_hairpin(dn).dg / 1000.0
-        hp_up = primer3.calc_hairpin(up).dg / 1000.0
+        hp_dn = primer3.calc_hairpin(dn, **p3_kwargs).dg / 1000.0
+        hp_up = primer3.calc_hairpin(up, **p3_kwargs).dg / 1000.0
         if hp_dn < max_hp or hp_up < max_hp:
             continue
-        homo_dn = primer3.calc_homodimer(dn).dg / 1000.0
-        homo_up = primer3.calc_homodimer(up).dg / 1000.0
+        homo_dn = primer3.calc_homodimer(dn, **p3_kwargs).dg / 1000.0
+        homo_up = primer3.calc_homodimer(up, **p3_kwargs).dg / 1000.0
         if homo_dn < max_homo or homo_up < max_homo:
             continue
-        hetero = primer3.calc_heterodimer(dn, up).dg / 1000.0
+        hetero = primer3.calc_heterodimer(dn, up, **p3_kwargs).dg / 1000.0
         if hetero < max_hetero:
             continue
         w['hairpin_dg_dn'] = round(hp_dn, 2)
