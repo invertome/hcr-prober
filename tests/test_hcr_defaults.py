@@ -82,3 +82,28 @@ def test_filter_by_structure_passes_ionic_strength_to_primer3(monkeypatch):
             assert kw.get('temp_c') == 37.0, (
                 f'primer3.calc_{fn_name} did not receive temp_c=37; got {kw}'
             )
+
+
+# --- Task 1.3: formamide Tm correction --------------------------------------
+def test_formamide_default_is_50pct():
+    """HCR hybridisation buffer is typically 5xSSC + 50% formamide; default
+    --formamide-pct should reflect that."""
+    p = _build_design_parser()
+    args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1'])
+    assert args.formamide_pct == 50.0, (
+        f'Default --formamide-pct should be 50 (HCR), got {args.formamide_pct}'
+    )
+
+
+def test_formamide_correction_lowers_tm_by_065_per_pct():
+    """The standard rule of thumb for formamide on Tm is dT = -0.65 C / 1%
+    formamide. With 50% formamide, Tm should drop by ~32.5 C relative to
+    formamide=0."""
+    from hcr_prober.utils.thermo_utils import calculate_tm
+    seq = 'CGATCGATCGATCGATCGATCGATC'
+    tm_no_formamide = calculate_tm(seq, formamide_pct=0.0)
+    tm_with_formamide = calculate_tm(seq, formamide_pct=50.0)
+    diff = tm_no_formamide - tm_with_formamide
+    assert abs(diff - 32.5) < 0.1, (
+        f'Expected ~32.5 C drop with 50% formamide, got {diff:.3f} C'
+    )

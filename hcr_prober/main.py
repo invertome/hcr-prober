@@ -34,6 +34,7 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--mg-conc', type=float, default=0.0, help='Mg2+ concentration in mM.')
     thermo_group.add_argument('--dntp-conc', type=float, default=0.0, help='dNTP concentration in mM.')
     thermo_group.add_argument('--dna-conc', type=float, default=25.0, help='DNA oligo concentration in nM.')
+    thermo_group.add_argument('--formamide-pct', type=float, default=50.0, help='Formamide percent in hyb buffer (HCR uses 50). Reduces Tm by 0.65 C per percent.')
     thermo_group.add_argument('--max-hairpin-dg', type=float, default=-3.0, help='Max hairpin delta-G (kcal/mol).')
     thermo_group.add_argument('--max-homodimer-dg', type=float, default=-5.0, help='Max homodimer delta-G (kcal/mol).')
     thermo_group.add_argument('--max-heterodimer-dg', type=float, default=-5.0, help='Max heterodimer delta-G (kcal/mol).')

@@ -49,13 +49,14 @@ def generate_thermo_candidates(sequence, args):
             balanced_gc_passed.append(w)
     audit['after_gc_balance_filter'] = len(balanced_gc_passed)
     tm_passed = []
-    na = getattr(args, 'na_conc', 50)
+    na = getattr(args, 'na_conc', 825)
     mg = getattr(args, 'mg_conc', 0)
     dntps = getattr(args, 'dntp_conc', 0)
     dnac = getattr(args, 'dna_conc', 25)
+    formamide = getattr(args, 'formamide_pct', 0.0)
     for w in balanced_gc_passed:
-        tm1 = tu.calculate_tm(w['probe_dn_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps)
-        tm2 = tu.calculate_tm(w['probe_up_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps)
+        tm1 = tu.calculate_tm(w['probe_dn_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps, formamide_pct=formamide)
+        tm2 = tu.calculate_tm(w['probe_up_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps, formamide_pct=formamide)
         if args.min_tm <= tm1 <= args.max_tm and args.min_tm <= tm2 <= args.max_tm:
             w['tm_dn'], w['tm_up'] = tm1, tm2
             tm_passed.append(w)

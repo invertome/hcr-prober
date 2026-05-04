@@ -17,11 +17,12 @@ def test_tm_returns_float():
 def test_tm_empty():
     assert calculate_tm("") == 0.0
 
-def test_tm_custom_concentrations():
-    tm_default = calculate_tm("ATGCGATCGATCGATCGATCGATCG")
-    tm_high_na = calculate_tm("ATGCGATCGATCGATCGATCGATCG", Na=200)
-    # Higher Na+ should increase Tm
-    assert tm_high_na > tm_default
+def test_tm_increases_with_higher_na():
+    """Higher Na+ stabilises duplexes via charge screening, raising Tm."""
+    seq = "ATGCGATCGATCGATCGATCGATCG"
+    tm_low_na = calculate_tm(seq, Na=50)
+    tm_high_na = calculate_tm(seq, Na=825)
+    assert tm_high_na > tm_low_na, f'Na 825 ({tm_high_na}) not > Na 50 ({tm_low_na})'
 
 def test_tm_caching():
     """Calling with same args should return cached result."""
