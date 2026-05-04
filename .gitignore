@@ -9,6 +9,7 @@ progress.md
 # Analysis outputs — local only
 cerebrin_*/
 swapped_probes/
+test_runs/
 *.xlsx
 *.tsv
 *.fasta
