@@ -56,6 +56,30 @@ def test_design_csv_has_thermo_columns():
     for col in ['gc_dn', 'gc_up', 'tm_dn', 'tm_up']:
         assert col in df.columns, f"Missing column: {col}"
 
+
+def test_design_csv_has_start_and_end_position_columns():
+    """Details CSV should include both start_pos_on_sense and
+    end_pos_on_sense so each probe pair can be mapped back to its
+    52-nt footprint on the input mRNA without external math.
+    """
+    import pandas as pd
+    result = run_design()
+    assert result.returncode == 0
+    csv_path = None
+    for root, dirs, files in os.walk(OUTPUT_DIR):
+        for f in files:
+            if f.endswith('_details.csv'):
+                csv_path = os.path.join(root, f)
+    assert csv_path is not None
+    df = pd.read_csv(csv_path)
+    assert 'start_pos_on_sense' in df.columns
+    assert 'end_pos_on_sense' in df.columns
+    if len(df):
+        assert (df['end_pos_on_sense'] - df['start_pos_on_sense']).eq(52).all(), (
+            f"end_pos_on_sense should always be start_pos_on_sense + 52 (window size); "
+            f"diff was {(df['end_pos_on_sense'] - df['start_pos_on_sense']).unique()}"
+        )
+
 def test_design_with_structure_filter():
     """Design with structure filter flags should work."""
     result = run_design('--max-hairpin-dg', '-2.0', '--max-homodimer-dg', '-4.0')

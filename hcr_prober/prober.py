@@ -150,11 +150,13 @@ def filter_by_structure(candidates, args):
 def format_probes_for_blast(thermo_candidates, gene_name, sequence, args):
     formatted_probes = []
     for i, p_data in enumerate(thermo_candidates):
+        start = len(sequence) - p_data['start_pos_rev'] - args.window_size
         probe = {
             'pair_id': f'{gene_name}_cand_{i+1}',
             'probe_up_target': p_data['probe_up_target'],
             'probe_dn_target': p_data['probe_dn_target'],
-            'start_pos_on_sense': len(sequence) - p_data['start_pos_rev'] - args.window_size,
+            'start_pos_on_sense': start,
+            'end_pos_on_sense': start + args.window_size,
             'start_pos_rev': p_data['start_pos_rev'],
         }
         # Carry forward all cached thermo/structure values

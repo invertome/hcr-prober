@@ -89,7 +89,7 @@ def load_config(config_path):
 def write_details_csv(probes, csv_path):
     """Write detailed thermodynamic CSV for each probe pair."""
     columns = [
-        'pair_id', 'pair_num', 'start_pos_on_sense',
+        'pair_id', 'pair_num', 'start_pos_on_sense', 'end_pos_on_sense',
         'probe_dn_target', 'probe_up_target',
         'gc_dn', 'gc_up', 'tm_dn', 'tm_up',
         'hairpin_dg_dn', 'hairpin_dg_up',
