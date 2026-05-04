@@ -1,8 +1,5 @@
-"""Tests for the --seed CLI flag and run-to-run determinism.
-
-Task 0.3 covers seeding only. The full IUPAC-spacer determinism proof
-(Task 0.4) lives later in this file once that task lands.
-"""
+"""Tests for the --seed CLI flag and run-to-run determinism."""
+import os
 import sys
 import pytest
 
@@ -77,4 +74,63 @@ def test_seed_default_is_zero(monkeypatch, tmp_path):
 
     assert 0 in captured_random, (
         f'Default --seed should be 0; random.seed(0) was not called. Got: {captured_random}'
+    )
+
+
+# --- Task 0.4: IUPAC spacer determinism --------------------------------------
+def _pkg_path():
+    import hcr_prober
+    return os.path.dirname(hcr_prober.__file__)
+
+
+def test_load_amplifiers_resolves_iupac_spacers():
+    """After load_amplifiers, no spacer in any amplifier should contain IUPAC ambiguity codes.
+
+    The IUPAC alphabet codes (W, R, Y, S, K, M, B, D, H, V, N) must be resolved
+    to concrete bases (A/C/G/T) at load time so probe sequences are reproducible
+    and the swap workflow can round-trip without sequence drift.
+    """
+    import random
+    from hcr_prober.file_io import load_amplifiers
+    random.seed(0)
+    amps = load_amplifiers(_pkg_path())
+    iupac_chars = set('WRYSKMBDHVN')
+    for amp_id, amp in amps.items():
+        for key in ('upspc', 'dnspc'):
+            spc = amp.get(key, '')
+            for c in spc.upper():
+                assert c not in iupac_chars, (
+                    f"After load, {amp_id}.{key}='{spc}' still contains unresolved "
+                    f"IUPAC code '{c}'. resolve_iupac_spacer should run at load time."
+                )
+
+
+def test_finalize_probes_uses_amplifier_dict_spacer_verbatim():
+    """finalize_probes must read upspc/dnspc straight from the amp dict and NOT
+    re-resolve them. We verify this by injecting an amp with literal 'WW' and
+    asserting it appears verbatim in the output. If finalize_probes still calls
+    resolve_iupac_spacer, 'W' (= A/T) would be replaced and the literal 'WW'
+    would not survive into the output.
+    """
+    from hcr_prober.prober import finalize_probes
+    amps = {'TEST': {'up': 'GAGGAG', 'dn': 'TTTACG', 'upspc': 'WW', 'dnspc': 'WW'}}
+    blueprint = [{
+        'pair_id': 'g_cand_1',
+        'probe_up_target': 'A' * 25,
+        'probe_dn_target': 'T' * 25,
+        'start_pos_on_sense': 0,
+        'start_pos_rev': 0,
+    }]
+
+    class _Args:
+        pass
+
+    final = finalize_probes(blueprint, 'TEST', amps, _Args())
+    assert len(final) == 1
+    p = final[0]
+    assert p['probe_up_final'] == 'GAGGAG' + 'WW' + 'A' * 25, (
+        f"upstream not assembled verbatim from amp dict: {p['probe_up_final']}"
+    )
+    assert p['probe_dn_final'] == 'T' * 25 + 'WW' + 'TTTACG', (
+        f"downstream not assembled verbatim from amp dict: {p['probe_dn_final']}"
     )

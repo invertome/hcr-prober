@@ -153,7 +153,7 @@ def finalize_probes(blueprint_probes, amplifier_name, amplifiers, args):
     amp_data = amplifiers.get(amplifier_name)
     if not amp_data: return []
     up_init, dn_init = amp_data['up'], amp_data['dn']
-    up_spc, dn_spc = su.resolve_iupac_spacer(amp_data.get('upspc', '')), su.resolve_iupac_spacer(amp_data.get('dnspc', ''))
+    up_spc, dn_spc = amp_data.get('upspc', ''), amp_data.get('dnspc', '')
     gene_name = blueprint_probes[0]['pair_id'].split('_cand_')[0] if blueprint_probes else 'gene'
     sorted_blueprint = sorted(blueprint_probes, key=lambda p: p['start_pos_on_sense'])
     for i, probe in enumerate(sorted_blueprint):

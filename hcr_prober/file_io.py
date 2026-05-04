@@ -2,6 +2,7 @@
 import os, sys, json, pandas as pd, yaml, glob
 import numpy as np
 from . import visualization
+from .utils import sequence_utils as su
 from loguru import logger
 from Bio import SeqIO
 from hcr_prober import __version__
@@ -29,6 +30,11 @@ def load_amplifiers(pkg_path):
     for aid in invalid:
         logger.warning(f'Amplifier {aid} missing required fields (up, dn). Skipping.')
         del amplifiers[aid]
+    for aid, data in amplifiers.items():
+        for key in ('upspc', 'dnspc'):
+            raw = data.get(key, '')
+            if raw:
+                data[key] = su.resolve_iupac_spacer(raw)
     if amplifiers:
         logger.info(f'Loaded {len(amplifiers)} amplifiers: {', '.join(amplifiers.keys())}')
     else:
