@@ -16,6 +16,8 @@ def generate_thermo_candidates(sequence, args):
     skip_rev_coord = len(rev_comp_seq) - args.skip_5prime
     all_windows = [w for w in all_windows if w['start_pos_rev'] < skip_rev_coord]
     audit['after_5prime_skip'] = len(all_windows)
+    all_windows = [w for w in all_windows if set(w['window_sequence'].upper()) <= {'A', 'C', 'G', 'T'}]
+    audit['after_acgt_filter'] = len(all_windows)
     if getattr(args, 'mask_regions', None):
         mask_intervals = su.parse_mask_regions(args.mask_regions)
         if mask_intervals:

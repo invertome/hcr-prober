@@ -86,7 +86,9 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
             if args.positive_selection_strategy == 'specific-id': f.write(f'    Target Transcript ID: {args.target_transcript_id}\n')
         f.write('\n\n--- Filtering Funnel (Blueprint Architecture) ---\n')
         audit_key_map = {
-            'initial_windows': 'Initial Windows', 'after_5prime_skip': 'After 5\' Skip', 'after_region_mask': 'After Region Masking', 'after_seq_mask': 'After Sequence Masking',
+            'initial_windows': 'Initial Windows', 'after_5prime_skip': 'After 5\' Skip',
+            'after_acgt_filter': 'After ACGT-Only Filter',
+            'after_region_mask': 'After Region Masking', 'after_seq_mask': 'After Sequence Masking',
             'after_thermo_filter': 'After Homopolymer Filter', 'after_gc_balance_filter': 'After Per-Arm GC + Balance', 'after_tm_filter': 'After Tm',
             'after_structure_filter': 'After Structure Filter',
             'after_blast_filter': 'Specific Candidates (Post-BLAST)', 'after_negative_blast': 'After Negative BLAST Screen',
@@ -94,7 +96,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
             'after_subsampling': 'After Final Subsampling'
         }
         ordered_keys = [
-            'initial_windows', 'after_5prime_skip', 'after_region_mask', 'after_seq_mask',
+            'initial_windows', 'after_5prime_skip', 'after_acgt_filter', 'after_region_mask', 'after_seq_mask',
             'after_thermo_filter', 'after_gc_balance_filter', 'after_tm_filter',
             'after_structure_filter',
             'after_blast_filter', 'after_negative_blast',

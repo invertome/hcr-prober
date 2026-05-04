@@ -125,6 +125,36 @@ def test_per_arm_gc_filter_rejects_unbalanced_arm():
     )
 
 
+def test_non_acgt_windows_rejected():
+    """Audit C6: any window containing non-ACGT characters must be rejected
+    before downstream Tm/structure/BLAST steps, which can crash on N or
+    IUPAC characters. With a sequence whose only ACGT-only window position
+    is contaminated with Ns, no candidates should pass.
+    """
+    # Build a sequence whose every 52-mer window touches at least one N.
+    seq = 'A' * 30 + 'N' * 30 + 'A' * 30  # length 90 — every 52-mer hits an N
+    args = make_args(min_gc=0.0, max_gc=100.0, max_homopolymer=200, max_gc_diff=200.0)
+    candidates, audit = generate_thermo_candidates(seq, args)
+    assert candidates == [], (
+        f'Expected 0 candidates because every window touches Ns; got {len(candidates)}. '
+        f'Audit: {audit}'
+    )
+
+
+def test_acgt_only_window_accepted_alongside_nearby_n_window():
+    """A sequence with one clean 52-mer window AND one N-containing window
+    should produce exactly the clean candidate after the non-ACGT filter.
+    """
+    # 52-nt clean window followed by some N-tainted region
+    clean = 'CGATCGATCGATCGATCGATCGATCATCGATCGATCGATCGATCGATCGATC'
+    assert len(clean) == 52
+    seq = clean + 'NNNN' * 5
+    args = make_args(min_gc=20.0, max_gc=80.0, max_homopolymer=4, max_gc_diff=20.0)
+    candidates, audit = generate_thermo_candidates(seq, args)
+    for c in candidates:
+        assert 'N' not in c.get('window_sequence', '').upper()
+
+
 def test_per_arm_gc_filter_accepts_balanced_arms():
     """A 52-mer with 52% GC in both arms should pass at min_gc=40."""
     arm1 = 'CGATCGATCGATCGATCGATCGATC'
