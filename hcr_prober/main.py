@@ -53,6 +53,7 @@ def add_shared_design_args(parser):
     proc_group.add_argument('--force', action='store_true', help='Force re-run and ignore cached results.')
     proc_group.add_argument('--db-path', help='Permanent directory to store/find BLAST databases.')
     proc_group.add_argument('--seed', type=int, default=0, help='RNG seed for deterministic output (default: 0).')
+    proc_group.add_argument('--threads', type=int, default=1, help='Number of threads to pass to blastn (-num_threads).')
     proc_group.add_argument('--buffer-preset', choices=['hcr-5xssc', 'pcr'], default='hcr-5xssc',
                             help='Convenience: sets na/mg/formamide together. Explicit flags override.')
     design_group.add_argument('--amplifier', nargs='+', required=True, help='One or more HCR amplifier IDs.')
@@ -155,6 +156,8 @@ def main():
         os.makedirs(args.output_dir, exist_ok=True)
         args.blast_db_positive = blast_wrapper.create_blast_db(args.blast_ref, args.db_path)
         args.blast_extra_args = args.blast_extra_args.split()
+        if getattr(args, 'threads', 1) > 1:
+            args.blast_extra_args.extend(['-num_threads', str(args.threads)])
 
     if args.command == 'design':
         sequences = file_io.read_fasta(args.input)

@@ -61,6 +61,63 @@ def test_blast_query_uses_uppercase_N_gap_and_plus_strand(tmp_path, monkeypatch)
     )
 
 
+def test_blast_query_includes_num_threads_when_given(tmp_path, monkeypatch):
+    """Phase 5.1: --threads N must propagate to blastn -num_threads."""
+    captured_cmd = []
+
+    def fake_run(cmd, **kw):
+        captured_cmd.append(list(cmd))
+        oi = cmd.index('-out')
+        open(cmd[oi + 1], 'w').close()
+        return _StubResult()
+
+    monkeypatch.setattr('subprocess.run', fake_run)
+    probes = [{'pair_id': 'x', 'probe_dn_target': 'A' * 25, 'probe_up_target': 'T' * 25}]
+    _run_blast(probes, 'fake_db', str(tmp_path), ['-num_threads', '4'])
+    cmd = captured_cmd[0]
+    assert '-num_threads' in cmd
+    assert cmd[cmd.index('-num_threads') + 1] == '4'
+
+
+def test_threads_flag_propagates_to_blast_extra_args(monkeypatch):
+    """End-to-end: parse --threads 8 and verify args.blast_extra_args picks
+    up '-num_threads 8'. Mocks the rest of main() so only the parsing path
+    runs."""
+    import sys
+    from types import SimpleNamespace
+
+    captured_extra = []
+
+    def fake_blueprint(gene_name, seq, td, args):
+        captured_extra.append(list(getattr(args, 'blast_extra_args', [])))
+        return None, None, {}
+
+    monkeypatch.setattr('hcr_prober.main.create_probe_blueprint', fake_blueprint)
+    monkeypatch.setattr('hcr_prober.main.check_dependencies', lambda: None)
+    monkeypatch.setattr('hcr_prober.blast_wrapper.create_blast_db',
+                        lambda *a, **kw: 'fake_db')
+    monkeypatch.setattr('hcr_prober.prober.finalize_probes', lambda *a, **kw: [])
+    monkeypatch.setattr('hcr_prober.prober.subsample_probes', lambda probes, n: probes)
+    monkeypatch.setattr('hcr_prober.file_io.write_outputs', lambda *a, **kw: None)
+    monkeypatch.setattr('hcr_prober.file_io.read_fasta',
+                        lambda *a, **kw: {'gene1': 'ACGT' * 100})
+
+    monkeypatch.setattr(sys, 'argv', [
+        'hcr-prober', 'design',
+        '-i', '/dev/null', '-o', '/tmp/dummy_out',
+        '--amplifier', 'B1',
+        '--threads', '8',
+    ])
+    from hcr_prober.main import main
+    main()
+
+    assert captured_extra, 'create_probe_blueprint never received args'
+    extra = captured_extra[0]
+    assert '-num_threads' in extra and '8' in extra, (
+        f"expected -num_threads 8 in args.blast_extra_args, got {extra}"
+    )
+
+
 def test_negative_screen_uses_real_db_path_not_directory(tmp_path, monkeypatch):
     """run_negative_screen used to pass a directory path (not the actual db
     name prefix returned by create_blast_db) to _run_blast, causing BLAST
