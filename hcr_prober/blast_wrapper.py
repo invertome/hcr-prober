@@ -29,16 +29,22 @@ def _run_blast(probes, db_name, temp_dir, extra_args):
     BLAST would over-reject by flagging transcripts where only one arm
     has a paralog hit while the other is specific.
 
-    -strand plus restricts hits to the sense (mRNA) strand of the
-    reference. The probe is antisense to the mRNA, so a true hit on a
-    sense-strand reference appears on the plus strand.
+    -strand minus is used because probes are antisense to the mRNA
+    target. The on-target match shows up as: revcomp(probe) aligned to
+    the plus strand of the (sense-mRNA) subject. -strand minus instructs
+    BLAST to search the reverse-complement of the query, finding exactly
+    that biologically-meaningful match. -strand plus would search the
+    probe as-written and miss every legitimate hit; -strand both (the
+    default) works but allows spurious antisense matches if the
+    reference contains any antisense contigs (rare in a transcriptome
+    but possible in genomic references).
     """
     if not probes: return None
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.fasta', dir=temp_dir) as f:
         for p in probes: f.write(f'>{p['pair_id']}\n{p['probe_dn_target']}NN{p['probe_up_target']}\n')
         query_path = f.name
     blast_out_path = f'{query_path}.blast.tsv'
-    cmd = ['blastn', '-query', query_path, '-db', db_name, '-out', blast_out_path, '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore', '-task', 'blastn-short', '-strand', 'plus']
+    cmd = ['blastn', '-query', query_path, '-db', db_name, '-out', blast_out_path, '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore', '-task', 'blastn-short', '-strand', 'minus']
     if extra_args: cmd.extend(extra_args)
     try: subprocess.run(cmd, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:

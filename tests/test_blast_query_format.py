@@ -50,8 +50,9 @@ def test_blast_query_uses_uppercase_N_gap_and_plus_strand(tmp_path, monkeypatch)
     assert out is not None
     cmd = captured['cmd']
     assert '-strand' in cmd, f'BLAST cmd missing -strand flag: {cmd}'
-    assert cmd[cmd.index('-strand') + 1] == 'plus', (
-        f'BLAST -strand value should be plus, got: {cmd[cmd.index("-strand") + 1]}'
+    assert cmd[cmd.index('-strand') + 1] == 'minus', (
+        f'BLAST -strand value should be minus (probe is antisense; on-target '
+        f'match is the revcomp of the probe), got: {cmd[cmd.index("-strand") + 1]}'
     )
     fasta = captured['query_fasta']
     assert 'NN' in fasta, f'Joined-arm gap should be uppercase NN; FASTA was:\n{fasta}'
