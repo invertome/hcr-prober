@@ -1,7 +1,10 @@
 .beads/
+.claude/
 AGENTS.md
 CLAUDE.md
 docs/
+progress.md
+*.pdf
 
 # Analysis outputs — local only
 cerebrin_*/
