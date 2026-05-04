@@ -59,7 +59,8 @@ def test_summary_contains_versions_and_seed(tmp_path):
     result, out_dir = _run(tmp_path)
     assert result.returncode == 0, f'stderr:\n{result.stderr}'
     text = _summary_text(out_dir)
-    assert 'hcr-prober' in text and '1.10' in text
+    assert 'hcr-prober' in text
+    assert re.search(r'\b\d+\.\d+\.\d+\b', text), 'no semver in summary'
     assert re.search(r'BLAST\+?[^\n]*\d+\.\d+', text), 'BLAST+ version missing in summary'
     assert re.search(r'primer3[^\n]*\d', text), 'primer3 version missing in summary'
     assert re.search(r'[Ss]eed[^\n]*7', text), '--seed value missing in summary'

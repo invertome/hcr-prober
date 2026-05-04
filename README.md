@@ -1,5 +1,5 @@
 
-# HCR-prober v1.10.0: Toolkit for HCR Probe Design
+# HCR-prober v1.12.0: Toolkit for HCR Probe Design
 
 ## Overview
 

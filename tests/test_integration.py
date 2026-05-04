@@ -91,7 +91,7 @@ def test_design_with_custom_concentrations():
     assert result.returncode == 0, f"stderr: {result.stderr}"
 
 def test_design_summary_has_version():
-    """Summary file should show v1.10.0."""
+    """Summary file should show v1.12.0."""
     result = run_design()
     assert result.returncode == 0
     for root, dirs, files in os.walk(OUTPUT_DIR):
@@ -99,7 +99,7 @@ def test_design_summary_has_version():
             if f.endswith('_summary.txt'):
                 with open(os.path.join(root, f)) as fh:
                     content = fh.read()
-                    assert 'v1.10.0' in content
+                    assert 'v1.12.0' in content
                     return
     pytest.fail("No summary file found")
 
@@ -125,6 +125,6 @@ def test_swap_still_works():
         shutil.rmtree(swap_dir)
 
 def test_version_in_help():
-    """Help output should show v1.10.0."""
+    """Help output should show v1.12.0."""
     result = subprocess.run(['hcr-prober', '--help'], capture_output=True, text=True)
-    assert 'v1.10.0' in result.stdout or '1.10.0' in result.stdout
+    assert 'v1.12.0' in result.stdout or '1.12.0' in result.stdout
