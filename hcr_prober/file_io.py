@@ -72,12 +72,11 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         f.write(f'  Min Probe Distance: {args.min_probe_distance} nt\n')
         f.write(f'  GC Range: {args.min_gc}-{args.max_gc} %\n')
         f.write(f'  Tm Range: {args.min_tm}-{args.max_tm} C\n')
-        na = getattr(args, 'na_conc', 50)
+        na = getattr(args, 'na_conc', 825)
         mg = getattr(args, 'mg_conc', 0)
         dntps = getattr(args, 'dntp_conc', 0)
         dna = getattr(args, 'dna_conc', 25)
-        if na != 50 or mg != 0 or dntps != 0 or dna != 25:
-            f.write(f'  Na+ conc: {na} mM | Mg2+ conc: {mg} mM | dNTP conc: {dntps} mM | DNA conc: {dna} nM\n')
+        f.write(f'  Na+ conc: {na} mM | Mg2+ conc: {mg} mM | dNTP conc: {dntps} mM | DNA conc: {dna} nM\n')
         if args.blast_ref:
             f.write(f'  BLAST Reference: {os.path.basename(args.blast_ref)}\n')
             f.write(f'  Discovery Bitscore Cutoff: {args.min_bitscore}\n')

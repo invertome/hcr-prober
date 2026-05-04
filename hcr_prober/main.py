@@ -30,7 +30,7 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--min-gc', type=float, default=40.0); thermo_group.add_argument('--max-gc', type=float, default=60.0)
     thermo_group.add_argument('--min-tm', type=float, default=40.0); thermo_group.add_argument('--max-tm', type=float, default=55.0)
     thermo_group.add_argument('--max-homopolymer', type=int, default=4); thermo_group.add_argument('--max-gc-diff', type=float, default=15.0)
-    thermo_group.add_argument('--na-conc', type=float, default=50.0, help='Na+ concentration in mM.')
+    thermo_group.add_argument('--na-conc', type=float, default=825.0, help='Na+ concentration in mM. Default 825 = 5xSSC (HCR hyb buffer). Use 50 for PCR conditions.')
     thermo_group.add_argument('--mg-conc', type=float, default=0.0, help='Mg2+ concentration in mM.')
     thermo_group.add_argument('--dntp-conc', type=float, default=0.0, help='dNTP concentration in mM.')
     thermo_group.add_argument('--dna-conc', type=float, default=25.0, help='DNA oligo concentration in nM.')
