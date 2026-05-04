@@ -23,7 +23,7 @@ def add_shared_design_args(parser):
     proc_group.add_argument('--seed', type=int, default=0, help='RNG seed for deterministic output (default: 0).')
     design_group.add_argument('--amplifier', nargs='+', required=True, help='One or more HCR amplifier IDs.')
     design_group.add_argument('--max-probes', type=int, default=33, help='Maximum number of probe pairs to select.')
-    design_group.add_argument('--skip-5prime', type=int, default=100, help='Nucleotides to exclude at the 5\' end.')
+    design_group.add_argument('--skip-5prime', type=int, default=50, help='Nucleotides to exclude at the 5\' end.')
     design_group.add_argument('--mask-sequences', help='Path to a FASTA of sequences to exclude (e.g., repeats).')
     design_group.add_argument('--mask-regions', help='Comma-separated nt regions to exclude (e.g., \'1-100,500-650\').')
     design_group.add_argument('--min-probe-distance', type=int, default=2, help='Minimum distance (in nt) between probe footprints.')

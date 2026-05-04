@@ -129,7 +129,7 @@ This is the primary command for designing probes against one or more transcripts
 - `--pool-name`: (Optional) A custom name for the probe pool.
 
 #### **Filtering Arguments**
-- `--skip-5prime`: Number of nucleotides to ignore at the 5' end of the transcript. Defaults to `100`.
+- `--skip-5prime`: Number of nucleotides to ignore at the 5' end of the transcript. Defaults to `50`.
 - `--max-probes`: The maximum number of probe pairs to include in the final set. Defaults to `33`.
 - `--min-probe-distance`: Minimum distance (in nt) between adjacent probes. Defaults to `2`.
 - `--min-gc`, `--max-gc`: Set a required GC content range for a probe to be kept. **Disabled by default.**

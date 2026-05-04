@@ -1,7 +1,25 @@
 """Tests for the --seed CLI flag and run-to-run determinism."""
 import os
 import sys
+import argparse
 import pytest
+
+
+def test_skip_5prime_default_is_50():
+    """Audit Phase 0.9: default --skip-5prime should be 50 (down from 100)
+    to maximise the number of valid probe windows on shorter transcripts.
+    """
+    from hcr_prober.main import add_shared_design_args
+    p = argparse.ArgumentParser()
+    sub = p.add_subparsers(dest='cmd')
+    d = sub.add_parser('design')
+    d.add_argument('-i', '--input')
+    d.add_argument('-o', '--output-dir')
+    add_shared_design_args(d)
+    args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1'])
+    assert args.skip_5prime == 50, (
+        f'Default --skip-5prime should be 50, got {args.skip_5prime}'
+    )
 
 
 def test_seed_flag_seeds_random_and_numpy(monkeypatch, tmp_path):
