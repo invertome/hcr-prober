@@ -187,6 +187,26 @@ def finalize_probes(blueprint_probes, amplifier_name, amplifiers, args):
         final_probes.append(final_probe)
     return final_probes
 
+def filter_tm_uniformity(probes, max_sigma):
+    """Iteratively drop the most extreme-Tm probe until sigma(mean-arm-Tm)
+    falls at or below max_sigma. No-op when max_sigma is None or fewer
+    than 3 probes are present.
+    """
+    if max_sigma is None or len(probes) < 3:
+        return probes
+    import statistics
+    work = list(probes)
+    while len(work) >= 3:
+        tms = [(p['tm_dn'] + p['tm_up']) / 2.0 for p in work]
+        sigma = statistics.stdev(tms)
+        if sigma <= max_sigma:
+            break
+        mean = sum(tms) / len(tms)
+        worst = max(range(len(work)), key=lambda i: abs(tms[i] - mean))
+        del work[worst]
+    return work
+
+
 def subsample_probes(probes, num_to_keep):
     """Quasi-uniform subsampling that does not force inclusion of the
     first and last probe (np.linspace(0, n-1, k) always pins both

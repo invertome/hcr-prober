@@ -133,6 +133,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
             'after_structure_filter': 'After Structure Filter',
             'after_blast_filter': 'Specific Candidates (Post-BLAST)', 'after_negative_blast': 'After Negative BLAST Screen',
             'after_spacing_filter': 'Spatially-Diverse Blueprint Probes',
+            'after_tm_uniformity': 'After Tm-Uniformity Filter',
             'after_subsampling': 'After Final Subsampling'
         }
         ordered_keys = [
@@ -140,7 +141,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
             'after_thermo_filter', 'after_gc_balance_filter', 'after_tm_filter',
             'after_structure_filter',
             'after_blast_filter', 'after_negative_blast',
-            'after_spacing_filter', 'after_subsampling'
+            'after_spacing_filter', 'after_tm_uniformity', 'after_subsampling'
         ]
         for key in ordered_keys:
             if key in audit_trail: f.write(f'  {audit_trail[key]:>7} {audit_key_map.get(key, key)}\n')

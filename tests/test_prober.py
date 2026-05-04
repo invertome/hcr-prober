@@ -91,6 +91,33 @@ def test_subsample_does_not_force_endpoint_inclusion():
     )
 
 
+def test_tm_uniformity_filter_removes_outliers():
+    """Phase 7.4: filter_tm_uniformity drops the highest-deviation probe
+    iteratively until sigma(Tm) is below the threshold."""
+    from hcr_prober.prober import filter_tm_uniformity
+    probes = [
+        {'pair_id': 'a', 'tm_dn': 40, 'tm_up': 40},
+        {'pair_id': 'b', 'tm_dn': 41, 'tm_up': 41},
+        {'pair_id': 'c', 'tm_dn': 42, 'tm_up': 42},
+        {'pair_id': 'd', 'tm_dn': 60, 'tm_up': 60},  # outlier
+        {'pair_id': 'e', 'tm_dn': 61, 'tm_up': 61},  # outlier
+    ]
+    out = filter_tm_uniformity(probes, max_sigma=2.0)
+    ids = {p['pair_id'] for p in out}
+    assert 'a' in ids and 'b' in ids and 'c' in ids
+    assert 'd' not in ids and 'e' not in ids
+
+
+def test_tm_uniformity_filter_no_op_when_disabled():
+    from hcr_prober.prober import filter_tm_uniformity
+    probes = [
+        {'pair_id': 'a', 'tm_dn': 40, 'tm_up': 40},
+        {'pair_id': 'b', 'tm_dn': 60, 'tm_up': 60},
+    ]
+    out = filter_tm_uniformity(probes, max_sigma=None)
+    assert len(out) == 2
+
+
 def test_subsample_returns_uniform_spacing():
     """The selected indices should be approximately uniformly spaced
     across the input."""

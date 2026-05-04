@@ -75,6 +75,7 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--dntp-conc', type=float, default=0.0, help='dNTP concentration in mM.')
     thermo_group.add_argument('--dna-conc', type=float, default=25.0, help='DNA oligo concentration in nM.')
     thermo_group.add_argument('--formamide-pct', type=float, default=None, help='Formamide percent in hyb buffer. Defaults from --buffer-preset (hcr-5xssc=50, pcr=0).')
+    thermo_group.add_argument('--max-tm-sigma', type=float, default=None, help='Optional: enforce sigma(Tm) <= N (Celsius) across the selected probe set by removing extreme-Tm probes.')
     thermo_group.add_argument('--max-hairpin-dg', type=float, default=-3.0, help='Max hairpin delta-G (kcal/mol).')
     thermo_group.add_argument('--max-homodimer-dg', type=float, default=-5.0, help='Max homodimer delta-G (kcal/mol).')
     thermo_group.add_argument('--max-heterodimer-dg', type=float, default=-5.0, help='Max heterodimer delta-G (kcal/mol).')
@@ -112,6 +113,9 @@ def create_probe_blueprint(gene_name, seq, temp_dir, args):
     if not specific_probes: return None, blast_reports, audit_trail
     spaced_probes = prober.select_spatially_diverse_probes(specific_probes, args)
     audit_trail['after_spacing_filter'] = len(spaced_probes)
+    if getattr(args, 'max_tm_sigma', None) is not None:
+        spaced_probes = prober.filter_tm_uniformity(spaced_probes, args.max_tm_sigma)
+        audit_trail['after_tm_uniformity'] = len(spaced_probes)
     return spaced_probes, blast_reports, audit_trail
 
 def main():
