@@ -13,12 +13,28 @@ def create_blast_db(ref_fasta, db_path):
     except Exception as e: logger.critical(f'FATAL: Failed to create BLAST DB. Error: {e.stderr if hasattr(e, "stderr") else e}'); sys.exit(1)
     return db_name
 def _run_blast(probes, db_name, temp_dir, extra_args):
+    """Run BLAST with the joined-arm probe-pair query.
+
+    Each probe pair is queried as a 52-mer of form
+        [probe_dn_target] NN [probe_up_target]
+    The 2-nt 'NN' represents the in-pair gap and is treated by BLAST as
+    ambiguous bases (no scoring contribution). Querying the joined arms
+    is intentional: HCR signal requires BOTH arms to bind in close
+    proximity on the target to nucleate the H1 hairpin, so an off-target
+    transcript matters only if both arms hit it adjacently. Per-arm
+    BLAST would over-reject by flagging transcripts where only one arm
+    has a paralog hit while the other is specific.
+
+    -strand plus restricts hits to the sense (mRNA) strand of the
+    reference. The probe is antisense to the mRNA, so a true hit on a
+    sense-strand reference appears on the plus strand.
+    """
     if not probes: return None
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.fasta', dir=temp_dir) as f:
-        for p in probes: f.write(f'>{p['pair_id']}\n{p['probe_dn_target']}nn{p['probe_up_target']}\n')
+        for p in probes: f.write(f'>{p['pair_id']}\n{p['probe_dn_target']}NN{p['probe_up_target']}\n')
         query_path = f.name
     blast_out_path = f'{query_path}.blast.tsv'
-    cmd = ['blastn', '-query', query_path, '-db', db_name, '-out', blast_out_path, '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore', '-task', 'blastn-short']
+    cmd = ['blastn', '-query', query_path, '-db', db_name, '-out', blast_out_path, '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore', '-task', 'blastn-short', '-strand', 'plus']
     if extra_args: cmd.extend(extra_args)
     try: subprocess.run(cmd, check=True, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:
