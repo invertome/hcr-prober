@@ -1,7 +1,16 @@
 {
-  "B1": { "up": "GAGGAGGGCAGCAAACGG", "dn": "GAAGAGTCTTCCTTTACG", "upspc": "aa", "dnspc": "ta" },
-  "B2": { "up": "CCTCGTAAATCCTCATCA", "dn": "ATCATCCAGTAAACCGCC", "upspc": "aa", "dnspc": "aa" },
-  "B3": { "up": "GTCCCTGCCTCTATATCT", "dn": "CCACTCAACTTTAACCCG", "upspc": "tt", "dnspc": "tt" },
-  "B4": { "up": "CCTCAACCTACCTCCAAC", "dn": "TCTCACCATATTCGCTTC", "upspc": "aa", "dnspc": "at" },
-  "B5": { "up": "CTCACTCCCAATCTCTAT", "dn": "CTACCCTACAAATCCAAT", "upspc": "aa", "dnspc": "aa" }
+  "B7": {
+    "up": "CTTCAACCTCCACCTACC",
+    "dn": "TCCAATCCCTACCCTCAC",
+    "upspc": "ww",
+    "dnspc": "ww",
+    "_source": "Wang et al. 2020 (BioRxiv); attribution per rwnull/insitu_probe_generator. UNVERIFIED in current session - cross-check against Wang 2020 SI before trusting for orders."
+  },
+  "B9": {
+    "up": "CACGTATCTACTCCACTC",
+    "dn": "TCAGCACACTCCCAACCC",
+    "upspc": "ww",
+    "dnspc": "ww",
+    "_source": "Wang et al. 2020 (BioRxiv); attribution per rwnull/insitu_probe_generator. UNVERIFIED in current session - cross-check against Wang 2020 SI before trusting for orders."
+  }
 }

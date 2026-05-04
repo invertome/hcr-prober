@@ -1,0 +1,37 @@
+{
+  "B1": {
+    "up": "GAGGAGGGCAGCAAACGG",
+    "dn": "GAAGAGTCTTCCTTTACG",
+    "upspc": "aa",
+    "dnspc": "ta",
+    "_source": "Choi et al. 2014 ACS Nano 8(5):4284-4294, SI page 43 (S6); Choi et al. 2018 Development 145:dev165753"
+  },
+  "B2": {
+    "up": "CCTCGTAAATCCTCATCA",
+    "dn": "ATCATCCAGTAAACCGCC",
+    "upspc": "aa",
+    "dnspc": "aa",
+    "_source": "Choi et al. 2014 ACS Nano 8(5):4284-4294, SI page 43 (S6); Choi et al. 2018 Development 145:dev165753"
+  },
+  "B3": {
+    "up": "GTCCCTGCCTCTATATCT",
+    "dn": "CCACTCAACTTTAACCCG",
+    "upspc": "tt",
+    "dnspc": "tt",
+    "_source": "Choi et al. 2014 ACS Nano 8(5):4284-4294, SI page 43 (S6); Choi et al. 2018 Development 145:dev165753"
+  },
+  "B4": {
+    "up": "CCTCAACCTACCTCCAAC",
+    "dn": "TCTCACCATATTCGCTTC",
+    "upspc": "aa",
+    "dnspc": "at",
+    "_source": "Choi et al. 2014 ACS Nano 8(5):4284-4294, SI page 43 (S6); Choi et al. 2018 Development 145:dev165753"
+  },
+  "B5": {
+    "up": "CTCACTCCCAATCTCTAT",
+    "dn": "CTACCCTACAAATCCAAT",
+    "upspc": "aa",
+    "dnspc": "aa",
+    "_source": "Choi et al. 2014 ACS Nano 8(5):4284-4294, SI page 43 (S6); Choi et al. 2018 Development 145:dev165753"
+  }
+}
