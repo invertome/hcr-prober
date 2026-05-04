@@ -54,6 +54,7 @@ def add_shared_design_args(parser):
     proc_group.add_argument('--db-path', help='Permanent directory to store/find BLAST databases.')
     proc_group.add_argument('--seed', type=int, default=0, help='RNG seed for deterministic output (default: 0).')
     proc_group.add_argument('--threads', type=int, default=1, help='Number of threads to pass to blastn (-num_threads).')
+    proc_group.add_argument('--dry-run', action='store_true', help='Run the thermo / GC / Tm / structure filters and report the funnel without invoking BLAST.')
     proc_group.add_argument('--buffer-preset', choices=['hcr-5xssc', 'pcr'], default='hcr-5xssc',
                             help='Convenience: sets na/mg/formamide together. Explicit flags override.')
     design_group.add_argument('--amplifier', nargs='+', required=True, help='One or more HCR amplifier IDs.')
@@ -146,6 +147,10 @@ def main():
     if not args.amplifiers: sys.exit(1)
 
     if args.command in ['design', 'isoform-split']:
+        if getattr(args, 'dry_run', False):
+            logger.info('--dry-run is set: BLAST screens will be skipped.')
+            args.blast_ref = None
+            args.blast_negative_ref = None
         check_dependencies()
         strat = getattr(args, 'positive_selection_strategy', None)
         common_strat = getattr(args, 'common_strategy', None)
@@ -154,7 +159,7 @@ def main():
         for amp in args.amplifier:
             if amp not in args.amplifiers: logger.critical(f'Amplifier \'{amp}\' not found.'); sys.exit(1)
         os.makedirs(args.output_dir, exist_ok=True)
-        args.blast_db_positive = blast_wrapper.create_blast_db(args.blast_ref, args.db_path)
+        args.blast_db_positive = blast_wrapper.create_blast_db(args.blast_ref, args.db_path) if args.blast_ref else None
         args.blast_extra_args = args.blast_extra_args.split()
         if getattr(args, 'threads', 1) > 1:
             args.blast_extra_args.extend(['-num_threads', str(args.threads)])
