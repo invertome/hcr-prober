@@ -188,7 +188,15 @@ def finalize_probes(blueprint_probes, amplifier_name, amplifiers, args):
     return final_probes
 
 def subsample_probes(probes, num_to_keep):
+    """Quasi-uniform subsampling that does not force inclusion of the
+    first and last probe (np.linspace(0, n-1, k) always pins both
+    endpoints, biasing the selected set toward the 5'/3' termini).
+
+    Pick the midpoint of each of `num_to_keep` equal-width buckets:
+        idx_i = floor((i + 0.5) * n / k)
+    """
     if num_to_keep >= len(probes): return probes
     logger.info(f'Subsampling from {len(probes)} pairs to a max of {num_to_keep} for even coverage.')
-    indices = np.linspace(0, len(probes) - 1, num=num_to_keep, dtype=int)
+    n = len(probes)
+    indices = [int((i + 0.5) * n / num_to_keep) for i in range(num_to_keep)]
     return [probes[i] for i in indices]

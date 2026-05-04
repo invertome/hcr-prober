@@ -75,6 +75,35 @@ def test_dp_all_overlapping():
     result = select_spatially_diverse_probes(probes, args)
     assert len(result) == 1
 
+def test_subsample_does_not_force_endpoint_inclusion():
+    """Phase 7.1: np.linspace(0, n-1, k) always pins index 0 and n-1.
+    With a quasi-uniform midpoint sampler, endpoints are not biased."""
+    from hcr_prober.prober import subsample_probes
+    probes = [{'pair_id': str(i), 'pair_num': i, 'start_pos_on_sense': i * 60} for i in range(20)]
+    sub = subsample_probes(probes, 5)
+    assert len(sub) == 5
+    ids = [p['pair_id'] for p in sub]
+    assert ids[0] != '0', (
+        f'subsample_probes still pins the first probe (index 0). Got ids: {ids}'
+    )
+    assert ids[-1] != '19', (
+        f'subsample_probes still pins the last probe (index 19). Got ids: {ids}'
+    )
+
+
+def test_subsample_returns_uniform_spacing():
+    """The selected indices should be approximately uniformly spaced
+    across the input."""
+    from hcr_prober.prober import subsample_probes
+    probes = [{'pair_id': str(i), 'pair_num': i, 'start_pos_on_sense': i * 60} for i in range(20)]
+    sub = subsample_probes(probes, 5)
+    ids = [int(p['pair_id']) for p in sub]
+    diffs = [b - a for a, b in zip(ids, ids[1:])]
+    assert max(diffs) - min(diffs) <= 1, (
+        f'subsampled indices not uniformly spaced: {ids} (diffs {diffs})'
+    )
+
+
 def test_dp_skip_case_critical():
     """Test where skipping a probe leads to more probes overall.
     This specifically tests the dp[i] = max(dp[i-1], ...) logic."""
