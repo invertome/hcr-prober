@@ -1,5 +1,6 @@
 # hcr_prober/main.py
-import argparse, os, sys, shutil, tempfile, copy
+import argparse, os, sys, shutil, tempfile, copy, random
+import numpy as np
 from loguru import logger
 from . import file_io, prober, blast_wrapper, isoform_analyzer, swapper
 from hcr_prober import __version__
@@ -19,6 +20,7 @@ def add_shared_design_args(parser):
     adv_group = parser.add_argument_group('Advanced Structural Parameters')
     proc_group.add_argument('--force', action='store_true', help='Force re-run and ignore cached results.')
     proc_group.add_argument('--db-path', help='Permanent directory to store/find BLAST databases.')
+    proc_group.add_argument('--seed', type=int, default=0, help='RNG seed for deterministic output (default: 0).')
     design_group.add_argument('--amplifier', nargs='+', required=True, help='One or more HCR amplifier IDs.')
     design_group.add_argument('--max-probes', type=int, default=33, help='Maximum number of probe pairs to select.')
     design_group.add_argument('--skip-5prime', type=int, default=100, help='Nucleotides to exclude at the 5\' end.')
@@ -97,6 +99,9 @@ def main():
 
     parser.set_defaults(**config)
     args = parser.parse_args()
+    seed = getattr(args, 'seed', 0)
+    random.seed(seed)
+    np.random.seed(seed)
     args.amplifiers = file_io.load_amplifiers(os.path.dirname(os.path.realpath(__file__)))
     if not args.amplifiers: sys.exit(1)
 
