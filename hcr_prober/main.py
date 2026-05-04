@@ -27,9 +27,22 @@ def apply_buffer_preset(args):
             setattr(args, key, val)
 
 def check_dependencies():
+    import re, subprocess
     if not shutil.which('blastn') or not shutil.which('makeblastdb'):
         logger.critical('FATAL ERROR: NCBI BLAST+ is not installed or not in your system\'s PATH.'); sys.exit(1)
-    logger.info('Dependency check passed: NCBI BLAST+ found.')
+    try:
+        result = subprocess.run(['blastn', '-version'], capture_output=True, text=True, check=False)
+        version_line = (result.stdout + '\n' + result.stderr).strip().splitlines()[0] if result.stdout or result.stderr else 'unknown'
+        match = re.search(r'(\d+\.\d+\.\d+)', version_line)
+        version = match.group(1) if match else 'unknown'
+        logger.info(f'Dependency check passed: NCBI BLAST+ {version} found.')
+        if version != 'unknown':
+            major, minor, *_ = (int(p) for p in version.split('.')[:2] + ['0'])
+            if (major, minor) < (2, 10):
+                logger.warning(f'BLAST+ {version} is older than the tested minimum (2.10); '
+                               f'output-format and -task semantics may differ.')
+    except Exception as e:
+        logger.info(f'Dependency check passed: NCBI BLAST+ found (version detection failed: {e}).')
 
 def add_shared_design_args(parser):
     proc_group = parser.add_argument_group('Processing & Performance Arguments')
