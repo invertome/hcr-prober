@@ -5,7 +5,9 @@ from loguru import logger
 from . import file_io, prober, blast_wrapper, isoform_analyzer, swapper
 from hcr_prober import __version__
 
-def setup_logging(): logger.remove(); logger.add(sys.stderr, format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>')
+def setup_logging(level='INFO'):
+    logger.remove()
+    logger.add(sys.stderr, format='<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>', level=level)
 
 
 BUFFER_PRESETS = {
@@ -55,6 +57,8 @@ def add_shared_design_args(parser):
     proc_group.add_argument('--seed', type=int, default=0, help='RNG seed for deterministic output (default: 0).')
     proc_group.add_argument('--threads', type=int, default=1, help='Number of threads to pass to blastn (-num_threads).')
     proc_group.add_argument('--dry-run', action='store_true', help='Run the thermo / GC / Tm / structure filters and report the funnel without invoking BLAST.')
+    proc_group.add_argument('--verbose', action='store_true', help='Log at DEBUG level.')
+    proc_group.add_argument('--quiet', action='store_true', help='Log at WARNING level only.')
     proc_group.add_argument('--buffer-preset', choices=['hcr-5xssc', 'pcr'], default='hcr-5xssc',
                             help='Convenience: sets na/mg/formamide together. Explicit flags override.')
     design_group.add_argument('--amplifier', nargs='+', required=True, help='One or more HCR amplifier IDs.')
@@ -139,6 +143,10 @@ def main():
 
     parser.set_defaults(**config)
     args = parser.parse_args()
+    if getattr(args, 'verbose', False):
+        setup_logging('DEBUG')
+    elif getattr(args, 'quiet', False):
+        setup_logging('WARNING')
     apply_buffer_preset(args)
     seed = getattr(args, 'seed', 0)
     random.seed(seed)
