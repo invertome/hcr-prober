@@ -1,11 +1,43 @@
 # hcr_prober/file_io.py
-import os, sys, json, pandas as pd, yaml, glob
+import os, sys, json, pandas as pd, yaml, glob, socket, datetime, subprocess, re
 import numpy as np
 from . import visualization
 from .utils import sequence_utils as su
 from loguru import logger
 from Bio import SeqIO
 from hcr_prober import __version__
+
+
+def _detect_blast_version():
+    try:
+        r = subprocess.run(['blastn', '-version'], capture_output=True, text=True, check=False)
+        m = re.search(r'(\d+\.\d+\.\d+)', r.stdout + r.stderr)
+        return m.group(1) if m else 'unknown'
+    except Exception:
+        return 'unknown'
+
+
+def _detect_primer3_version():
+    try:
+        import primer3
+        return getattr(primer3, '__version__', 'unknown')
+    except Exception:
+        return 'unknown'
+
+
+def _provenance_block(args):
+    cmd = ' '.join(sys.argv)
+    seed = getattr(args, 'seed', 0)
+    return (
+        '\n--- Provenance ---\n'
+        f'  Command: {cmd}\n'
+        f'  hcr-prober version: {__version__}\n'
+        f'  BLAST+ version: {_detect_blast_version()}\n'
+        f'  primer3 version: {_detect_primer3_version()}\n'
+        f'  Host: {socket.gethostname()}\n'
+        f'  Timestamp (UTC): {datetime.datetime.utcnow().isoformat(timespec="seconds")}Z\n'
+        f'  RNG seed: {seed}\n'
+    )
 
 def read_fasta(file_path):
     if not file_path: return {}
@@ -75,6 +107,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
     with open(os.path.join(amp_dir, f'{gene_name}_{amplifier}_summary.txt'), 'w') as f:
         f.write(f'HCR-prober v{__version__} Summary for: {gene_name} | Amplifier: {amplifier}\n{'='*70}\n')
         if not probes: f.write('\n*** PIPELINE FAILED TO PRODUCE ANY FINAL PROBES ***\n')
+        f.write(_provenance_block(args))
         f.write('\n--- Run Parameters ---\n')
         f.write(f'  Target Sequence Length: {len(sequence)} nt\n')
         f.write(f'  Min Probe Distance: {args.min_probe_distance} nt\n')
