@@ -113,9 +113,14 @@ def run_negative_screen(probes, args, temp_dir, target_ids):
         logger.info(f'Auto-derived negative reference with {count} non-target sequences.')
     if not neg_ref:
         return probes, {}
-    # Build negative DB and run BLAST
-    neg_db = os.path.join(temp_dir, 'neg_blast_db')
-    create_blast_db(neg_ref, neg_db)
+    # Build negative DB and run BLAST. create_blast_db returns the actual
+    # DB-name prefix (e.g. /tmp/.../neg_blast_db/negative_ref); use that.
+    # Passing the bare directory path to BLAST silently fails with a
+    # "memory map file error", so the screen used to skip without warning.
+    neg_db_dir = os.path.join(temp_dir, 'neg_blast_db')
+    neg_db = create_blast_db(neg_ref, neg_db_dir)
+    if not neg_db:
+        return probes, {}
     blast_output = _run_blast(probes, neg_db, temp_dir, getattr(args, 'blast_extra_args', []))
     if not blast_output:
         return probes, {}
