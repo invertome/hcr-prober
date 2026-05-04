@@ -151,6 +151,7 @@ def main():
                 common_args.output_dir = os.path.join(args.output_dir, prefix, 'common_probes')
                 common_args.mask_regions = ','.join([f'{s+1}-{e}' for s, e in unique_intervals]) if unique_intervals else None
                 common_args.job_name = f'{prefix}_common'
+                common_args._isoform_ids = set(iso_group.keys())
                 blueprint, blast_reports, audit_trail = create_probe_blueprint(f'{prefix}_common', ref_seq, temp_dir, common_args)
                 if blueprint: logger.success(f'Created COMMON blueprint with {len(blueprint)} probes for {prefix}.')
                 for amp in args.amplifier:
@@ -164,6 +165,7 @@ def main():
                     unique_args.positive_selection_strategy = args.unique_strategy
                     logger.info(f'--- Creating UNIQUE probe blueprint for {iso_id} (Strategy: {unique_args.positive_selection_strategy}) ---')
                     unique_args.output_dir, unique_args.mask_regions, unique_args.job_name = unique_output_base, unique_mask, iso_id
+                    unique_args._isoform_ids = set(iso_group.keys()) - {iso_id}
                     blueprint, blast_reports, audit_trail = create_probe_blueprint(iso_id, iso_seq, temp_dir, unique_args)
                     if blueprint: logger.success(f'Created UNIQUE blueprint with {len(blueprint)} probes for {iso_id}.')
                     for amp in args.amplifier:
