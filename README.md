@@ -248,7 +248,18 @@ The SVG, summary, and CSV together let you reproduce or audit any run from the f
 
 ## Examples
 
+Each example is self-contained: paste the command, point it at your own FASTA files, and inspect the output files described in [Output files](#output-files). If you're new to HCR probe design, work through Example 1 in full before skimming the rest — every later example builds on the same mental model.
+
+You'll typically need two FASTA files:
+
+- **Target FASTA** (e.g. `MyGene.fasta`) — one or more mRNA records, sense strand. If the file has more than one record, hcr-prober processes all of them; use `--gene-name` to pick a single record.
+- **Reference transcriptome** (e.g. `host_transcriptome.fasta`) — every transcript in the expression background of your organism. hcr-prober uses this both to confirm each probe hits its intended target (the positive screen) and to reject probes that *also* hit something else (the auto-derived negative screen).
+
+A reference transcriptome is optional but strongly recommended: without `--blast-ref`, no specificity check is performed and probes might bind paralogs or unrelated transcripts.
+
 ### 1. Default HCR run with BLAST screen
+
+The most common scenario: you have one mRNA target, you want a tilable set of probe pairs that work under standard HCR v3.0 conditions (5×SSC + 50 % formamide + 37 °C), and you have a transcriptome to screen against.
 
 ```bash
 hcr-prober design \
@@ -259,7 +270,19 @@ hcr-prober design \
     --threads 4
 ```
 
+What each flag does:
+
+- `-i MyGene.fasta` — the target. The first record (or the one matching `--gene-name`) becomes the design target.
+- `-o probes/MyGene/` — the top-level output directory. hcr-prober creates `probes/MyGene/<gene>/B1/` underneath it and writes the five output files there (`order.xlsx`, `probes.fasta`, `probe_map.svg`, `summary.txt`, `details.csv`).
+- `--amplifier B1` — uses the B1 split-initiator handles from the Choi 2018 amplifier set. See [Amplifier sources](#amplifier-sources) for the full list and provenance.
+- `--blast-ref host_transcriptome.fasta` — runs blastn against this file to (a) confirm each probe pair hits the intended target with bitscore ≥ 75 and (b) reject any probe that *also* hits a non-target transcript at the same bitscore threshold.
+- `--threads 4` — passes `-num_threads 4` to blastn. BLAST is the slow step; this scales nearly linearly with available cores.
+
+When the run finishes, open `<gene>_B1_summary.txt` first. It shows the filtering funnel (how many candidate windows survived each filter), the exact command, software versions, host, and seed needed to reproduce the run. `<gene>_B1_probe_map.svg` shows where the surviving probes landed along the transcript; `<gene>_B1_order.xlsx` is what you upload to your oligo vendor.
+
 ### 2. Multiple amplifiers in one shot
+
+In multiplexed HCR, each gene gets a different amplifier so each gets a different fluorophore. You can design probe sets for multiple amplifiers against the same target in a single command — useful when you haven't decided which channel to use yet, or when you want to keep your options open.
 
 ```bash
 hcr-prober design \
@@ -269,9 +292,17 @@ hcr-prober design \
     -o probes/
 ```
 
-Three amplifier-specific output folders are produced under `probes/MyGene/`.
+You'll get three sibling output directories: `probes/<gene>/B1/`, `probes/<gene>/B2/`, `probes/<gene>/B3/`. The probe target sequences are identical across the three; only the appended HCR initiator handles differ. (If you only realize later that you needed a different amplifier, see Example 8 — swapping is cheaper than re-running.)
 
 ### 3. Isoform-aware design
+
+Many genes have several mRNA isoforms (alternative splice forms). Depending on your biology you may want to:
+
+- visualize *all* isoforms with one set of probes — target the regions they share ("common probes"),
+- distinguish individual isoforms — target the regions unique to each ("isoform-specific probes"),
+- or both.
+
+`isoform-split` runs a pairwise alignment across the input FASTA, partitions each transcript into common and unique regions, and runs the full design pipeline on each region category separately.
 
 For a gene `Opsin1` with two isoforms `Opsin1_A` and `Opsin1_B`:
 
@@ -284,9 +315,21 @@ hcr-prober isoform-split \
     -o probes/opsins/
 ```
 
-You get one `common_probes/Opsin1_common/B3/` folder (probes that bind both isoforms) and per-isoform `isoform_specific_probes/Opsin1_A/B3/` etc. (probes unique to each isoform).
+`--gene-prefix Opsin1` tells the tool to group every record whose ID starts with `Opsin1_` into one isoform set. Pass multiple prefixes (`--gene-prefix Opsin1 Opsin2`) to process several genes in one run. The output layout is:
+
+```
+probes/opsins/
+├── common_probes/Opsin1_common/B3/         # binds both isoforms
+└── isoform_specific_probes/
+    ├── Opsin1_A/B3/                        # binds only Opsin1_A
+    └── Opsin1_B/B3/                        # binds only Opsin1_B
+```
+
+If a region is too short for any valid 52 nt window (for example, a unique stretch only 30 nt long), no probe is reported for that region — check the relevant `*_summary.txt` to see which slots came up empty and why.
 
 ### 4. Tight Tm uniformity for multiplex experiments
+
+When you pool probes from many genes into one hybridization, every probe needs to anneal at the same temperature. The default Tm window of 40–55 °C is wide on purpose; if your protocol assumes a single hybridization Tm across genes, you want a tighter spread.
 
 ```bash
 hcr-prober design \
@@ -298,9 +341,13 @@ hcr-prober design \
     -o probes/
 ```
 
-After spacing and Tm-window filtering, probes whose Tm is most extreme are dropped one-by-one until σ(Tm) ≤ 1.0 °C across the final pool.
+`--min-tm` / `--max-tm` shrink the per-probe Tm window. `--max-tm-sigma 1.0` adds a *post-selection* step: after the normal pipeline has chosen its set, hcr-prober drops the probe with the most extreme Tm, recomputes σ(Tm), and repeats until either σ ≤ 1.0 °C or fewer than four probes remain. The summary file logs how many probes were peeled and the final σ.
+
+Trade-off: tighter σ usually means fewer probes. If `--max-probes 33` was already hit before this filter, expect to lose several here.
 
 ### 5. Running under PCR conditions
+
+By default hcr-prober reports thermo values for HCR hyb buffer (high salt, high formamide). If you're using this tool to design DNA primers or probes for a PCR-style assay (50 mM Na⁺, no formamide, higher annealing temperatures), switch buffer presets:
 
 ```bash
 hcr-prober design \
@@ -311,7 +358,11 @@ hcr-prober design \
     -o probes/
 ```
 
+`--buffer-preset pcr` sets `--na-conc 50` and `--formamide-pct 0` automatically. The reported Tm values then reflect the PCR buffer rather than HCR hyb buffer, so your `--min-tm` / `--max-tm` window should be raised accordingly (PCR Tms run roughly 20 °C higher than the corresponding HCR Tms). If you need finer control, override `--na-conc`, `--mg-conc`, `--dntp-conc`, `--dna-conc`, or `--formamide-pct` directly — explicit values always win over the preset.
+
 ### 6. Filter-tuning without paying BLAST cost
+
+BLAST is the slow step. While you're still tuning GC% and Tm windows for an unfamiliar transcript, you don't need it — you just want to see how many candidate windows survive your sequence/thermo filters.
 
 ```bash
 hcr-prober design \
@@ -323,11 +374,16 @@ hcr-prober design \
     --min-tm 38 --max-tm 52
 ```
 
-The audit funnel still runs; the BLAST stack is bypassed entirely.
+`--dry-run` runs every filter (length, IUPAC, homopolymer, GC, Tm, secondary structure) and reports the full funnel in `*_summary.txt`, but skips BLAST entirely. Iterate quickly on the GC/Tm windows until the funnel shows a healthy candidate count, then drop `--dry-run` for the real run.
 
 ### 7. Excluding paralogs and antisense contigs from the negative screen
 
-If your reference contains the target's antisense contig and a paralog, mark them all as targets so the auto-negative-screen does not reject every probe:
+The auto-derived negative screen treats every transcript in `--blast-ref` that *isn't* explicitly named as a potential off-target. That bites you in two common cases:
+
+- the reference transcriptome contains both the sense and antisense assembly of your target locus,
+- the reference contains the target's paralogs or alternative isoforms.
+
+Without help, every probe will hit those near-identical contigs and get rejected as non-specific — and the run will report zero surviving probes for no obvious reason.
 
 ```bash
 hcr-prober design \
@@ -338,7 +394,13 @@ hcr-prober design \
     -o probes/
 ```
 
+`--target-transcript-id` accepts multiple IDs. Each one is added to the negative-screen exclusion set, so probes that hit any of them are kept rather than discarded. (The first ID is also used by the `specific-id` positive-selection strategy if you opt into it via `--positive-selection-strategy specific-id`.)
+
+If you're not sure which IDs to pass, run the design once without this flag and look at the negative-screen rejection table in `*_summary.txt` — the most-hit reference contigs are usually the culprits.
+
 ### 8. Swap an existing order to a different amplifier
+
+You already designed and validated probes against your target with B1. Now you want the same probes in B5 — for instance, to combine them with another B1-labeled gene in a multiplex panel. There's no need to re-run `design`; the binding sequence is the same, only the appended initiator handles change.
 
 ```bash
 hcr-prober swap \
@@ -347,7 +409,7 @@ hcr-prober swap \
     --output-dir probes_b5/
 ```
 
-Or pass a directory to swap every `.xlsx` inside it.
+`swap` reads the order spreadsheet, strips the B1 handles + spacer from each oligo, prepends the matching B5 handles + spacer, and writes a new spreadsheet. Pass a directory to `--input-probes` to swap every `.xlsx` inside it in one go. The swap is round-trip-safe: B1 → B5 → B1 reproduces the original sequences byte-for-byte (locked in by a regression test), so this is always a non-destructive operation.
 
 ---
 
