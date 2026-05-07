@@ -220,9 +220,9 @@ Sequences are validated by length (handle + spacer + 25-nt arm) before stripping
 
 ---
 
-## Hybridisation buffer conditions
+## Hybridization buffer conditions
 
-HCR v3.0 hybridises in **5×SSC + 50 % formamide at 37 °C**. Reported Tm and ΔG values reflect those conditions by default, so the `--min-tm`/`--max-tm` range you set is the Tm your probes will actually see in the assay.
+HCR v3.0 hybridizes in **5×SSC + 50 % formamide at 37 °C**. Reported Tm and ΔG values reflect those conditions by default, so the `--min-tm`/`--max-tm` range you set is the Tm your probes will actually see in the assay.
 
 If you want to tune in PCR conditions (50 mM Na⁺, no formamide) — for example to reproduce values from a primer-design tool — pass `--buffer-preset pcr`. You can also override individual values; explicit flags win over the preset.
 
