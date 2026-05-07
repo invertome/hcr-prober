@@ -12,7 +12,7 @@ Designed for molecular biologists working with model and non-model organisms, in
 2. [Installation](#installation)
 3. [How the pipeline works](#how-the-pipeline-works)
 4. [Commands](#commands)
-5. [Hybridisation buffer conditions](#hybridisation-buffer-conditions)
+5. [Hybridization buffer conditions](#hybridisation-buffer-conditions)
 6. [Output files](#output-files)
 7. [Examples](#examples)
 8. [Reproducibility](#reproducibility)
