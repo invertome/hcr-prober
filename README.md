@@ -465,14 +465,9 @@ This release is a comprehensive audit of correctness, scientific defaults, robus
 - Details CSV adds `end_pos_on_sense` alongside `start_pos_on_sense`.
 - Glob-driven file iteration is sorted, so amplifier-load order and directory-mode swap are stable across machines.
 
-**Test coverage**
-- 38 → 104 tests covering correctness fixes, edge cases, end-to-end BLAST integration, isoform-split with real BLAST, swap workflow, and provenance metadata.
-
 **Algorithmic / UX**
 - `subsample_probes` no longer pins both endpoints (was `np.linspace`, which always included index 0 and n−1); now picks bucket midpoints.
 - SVG probe map uses one distinct HSL hue per probe (was a 6-colour recycled palette).
-
-**Deferred to future releases** — Probe `@dataclass` refactor and full type-hint sweep (Phase 6.1, 6.2); soft-penalty DP weight (Phase 7.2); MAFFT-based MSA path for many-isoform genes (Phase 7.3); independent verification of B7/B9 against the Wang 2020 supplement (Phase 1.6, blocked on supplement access).
 
 ---
 
