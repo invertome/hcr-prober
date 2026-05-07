@@ -155,7 +155,7 @@ Design probes against one or more transcripts.
 | `--max-homopolymer N` | `4` | Reject windows with runs ≥ N+1 of any base. |
 | `--max-tm-sigma N` | off | Optional: enforce σ(Tm) ≤ N across the final pool. |
 
-#### Hybridisation buffer
+#### Hybridization buffer
 | Flag | Default | Notes |
 |------|---------|-------|
 | `--buffer-preset {hcr-5xssc, pcr}` | `hcr-5xssc` | Convenience: sets Na+, Mg²⁺, formamide together. |
