@@ -130,3 +130,17 @@ def test_version_in_help():
     from hcr_prober import __version__
     result = subprocess.run(['hcr-prober', '--help'], capture_output=True, text=True)
     assert __version__ in result.stdout
+
+
+@pytest.mark.parametrize('subcommand', ['design', 'isoform-split', 'swap'])
+def test_subcommand_help_formats_cleanly(subcommand):
+    """Subcommand -h must print help and exit 0. argparse uses % for help-string
+    interpolation; any literal % in a help string must be escaped as %% or
+    formatting blows up only when the help formatter actually runs (which the
+    rest of the test suite never triggers)."""
+    result = subprocess.run(['hcr-prober', subcommand, '-h'], capture_output=True, text=True)
+    assert result.returncode == 0, (
+        f"{subcommand} -h exited {result.returncode}\nstderr: {result.stderr}"
+    )
+    assert 'ValueError' not in result.stderr
+    assert 'usage:' in result.stdout

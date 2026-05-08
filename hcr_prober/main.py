@@ -94,7 +94,7 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--mg-conc', type=float, default=None, help='Mg2+ concentration in mM. Default 0.')
     thermo_group.add_argument('--dntp-conc', type=float, default=0.0, help='dNTP concentration in mM.')
     thermo_group.add_argument('--dna-conc', type=float, default=25.0, help='DNA oligo concentration in nM.')
-    thermo_group.add_argument('--formamide-pct', type=float, default=None, help='Formamide percent in hyb buffer. Default 0 (no correction). --buffer-preset hcr-5xssc sets to 50. Tm correction: -0.65 C / %.')
+    thermo_group.add_argument('--formamide-pct', type=float, default=None, help='Formamide percent in hyb buffer. Default 0 (no correction). --buffer-preset hcr-5xssc sets to 50. Tm correction: -0.65 C per %% formamide.')
     thermo_group.add_argument('--urea-M', type=float, default=None, help='Urea molarity in hyb buffer. Default 0 (no correction). --buffer-preset hcr-5xssct-urea sets to 4. Tm correction: -2.25 C / M.')
     thermo_group.add_argument('--max-tm-sigma', type=float, default=None, help='Optional: enforce sigma(Tm) <= N (Celsius) across the selected probe set by removing extreme-Tm probes.')
     thermo_group.add_argument('--max-hairpin-dg', type=float, default=-3.0, help='Max hairpin delta-G (kcal/mol).')
