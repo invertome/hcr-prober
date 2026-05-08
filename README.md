@@ -1,4 +1,4 @@
-# HCR-prober v1.13.0
+# HCR-prober v1.13.1
 
 A command-line pipeline for designing DNA probes for third-generation *in situ* Hybridization Chain Reaction (HCR v3.0). Given an mRNA target, hcr-prober produces an order-ready set of split-initiator probe pairs that tile the transcript, with optional BLAST-based specificity screening, secondary-structure filtering, and a fully reproducible audit trail.
 
@@ -17,7 +17,7 @@ Designed for molecular biologists working with model and non-model organisms, in
 7. [Examples](#examples)
 8. [Reproducibility](#reproducibility)
 9. [Amplifier sources](#amplifier-sources)
-10. [What's new in v1.13.0](#whats-new-in-v1130)
+10. [What's new in v1.13.1](#whats-new-in-v1131)
 
 ---
 
@@ -47,7 +47,7 @@ hcr-prober swap \
     --new-amplifier B5
 ```
 
-Defaults reflect contemporary urea-HCR conditions (5×SSCT + 4 M urea at 37 °C, per Choi et al. 2018). The Tm filter is **off by default** — pass `--min-tm` / `--max-tm` to opt in. For formamide HCR pass `--buffer-preset hcr-5xssc`; for PCR conditions pass `--buffer-preset pcr`.
+By default hcr-prober makes no Tm-related adjustments and the Tm filter is off — pass `--min-tm` / `--max-tm` to opt into a Tm window, and pass `--buffer-preset {hcr-5xssct-urea, hcr-5xssc, pcr}` to apply a denaturant correction (urea-HCR, formamide HCR, or PCR-style).
 
 ---
 
@@ -158,13 +158,13 @@ Design probes against one or more transcripts.
 #### Hybridization buffer
 | Flag | Default | Notes |
 |------|---------|-------|
-| `--buffer-preset {hcr-5xssct-urea, hcr-5xssc, pcr}` | `hcr-5xssct-urea` | Convenience: sets Na+, Mg²⁺, formamide, urea together. |
-| `--na-conc` | preset (825 / 50 mM) | Sodium concentration, mM. 5×SSC(T) ≈ 825 mM Na⁺. |
-| `--mg-conc` | preset (0 mM) | Magnesium concentration, mM. |
+| `--buffer-preset {hcr-5xssct-urea, hcr-5xssc, pcr}` | unset | Optional convenience preset. When unset, no denaturant correction is applied. |
+| `--na-conc` | `825` mM | Sodium concentration. 5×SSC(T) ≈ 825 mM Na⁺. `pcr` preset sets to 50. |
+| `--mg-conc` | `0` mM | Magnesium concentration. |
 | `--dntp-conc` | `0` mM | dNTP concentration. |
 | `--dna-conc` | `25` nM | Probe oligo concentration. |
-| `--formamide-pct` | preset (`hcr-5xssc`=50 %, others=0 %) | Formamide percent in hyb buffer. Tm is reduced by 0.65 °C per percent. |
-| `--urea-M` | preset (`hcr-5xssct-urea`=4 M, others=0 M) | Urea molarity in hyb buffer. Tm is reduced by 2.25 °C per molar. |
+| `--formamide-pct` | `0` % | Formamide percent. `hcr-5xssc` preset sets to 50. Tm is reduced by 0.65 °C per percent. |
+| `--urea-M` | `0` M | Urea molarity. `hcr-5xssct-urea` preset sets to 4. Tm is reduced by 2.25 °C per molar. |
 
 #### Secondary structure
 | Flag | Default | Notes |
@@ -223,17 +223,20 @@ Sequences are validated by length (handle + spacer + 25-nt arm) before stripping
 
 ## Hybridization buffer conditions
 
-HCR v3.0 is most commonly run today in **5×SSCT + 4 M urea at 37 °C** (Choi et al. 2018, *Development* 145:dev165753). Urea HCR has the practical advantages of avoiding formamide handling and being cheaper to ship at scale; the original formamide protocol (5×SSC + 50 % formamide) remains in use too. Both are supported, plus PCR-style conditions if you're using this tool to design DNA primers/probes for a non-HCR assay.
+By default hcr-prober makes no buffer-related Tm adjustments. Reported Tm is the **salt-corrected nearest-neighbor Tm at 5×SSCT** (Na⁺ ≈ 825 mM, no Mg²⁺, no denaturant). The Tm-window filter is also off by default — HCR's split-initiator architecture is tolerant enough that GC and homopolymer constraints alone are usually sufficient.
+
+You can opt into denaturant corrections by passing `--buffer-preset`:
 
 | `--buffer-preset` | Na⁺ | Mg²⁺ | Formamide | Urea | When to use |
 |---|---|---|---|---|---|
-| `hcr-5xssct-urea` *(default)* | 825 mM | 0 mM | 0 % | 4 M | Urea HCR (Choi 2018, contemporary practice) |
-| `hcr-5xssc` | 825 mM | 0 mM | 50 % | 0 M | Original formamide HCR (Choi 2014, 2018) |
-| `pcr` | 50 mM | 0 mM | 0 % | 0 M | DNA primers/probes for PCR-style assays |
+| *(unset, default)* | 825 mM | 0 mM | 0 % | 0 M | No Tm adjustments. Reported Tm = salt-corrected NN. |
+| `hcr-5xssct-urea` | 825 mM | 0 mM | 0 % | 4 M | Urea HCR (Choi et al. 2018, *Development* 145:dev165753). |
+| `hcr-5xssc` | 825 mM | 0 mM | 50 % | 0 M | Original formamide HCR (Choi 2014, 2018). |
+| `pcr` | 50 mM | 0 mM | 0 % | 0 M | DNA primers/probes for PCR-style assays. |
 
-Reported Tm and ΔG values reflect the active preset, so the numbers in the summary file are the Tm your probes actually see in the assay. **The Tm-window filter is off by default** — most contemporary HCR practice does not enforce a Tm window, since HCR's split-initiator architecture is tolerant within standard GC and homopolymer constraints. Pass `--min-tm` / `--max-tm` to opt in; for the urea preset a typical window is 60–75 °C, for the formamide preset 40–55 °C.
+Individual flags (`--na-conc`, `--mg-conc`, `--formamide-pct`, `--urea-M`) win over the preset, so you can mix and match. To opt into a Tm filter, pass `--min-tm` / `--max-tm`; with the urea preset a typical window is 60–75 °C, with the formamide preset 40–55 °C, with no preset 70–85 °C.
 
-The Tm correction is
+The Tm correction (when a denaturant is present) is
 
 ```
 Tm_actual = Tm_NN(salt-corrected) − 0.65 × formamide_pct − 2.25 × urea_M
@@ -458,6 +461,12 @@ The package ships with two JSON files defining HCR v3.0 split-initiator handles:
 Each amplifier entry carries a `_source` field with its citation. Adding a new amplifier is a matter of dropping in another JSON file with `up`, `dn`, `upspc`, `dnspc`, and `_source` — no code change required.
 
 ---
+
+## What's new in v1.13.1
+
+`--buffer-preset` is now **unset by default**. Without an explicit preset, hcr-prober makes no denaturant-related Tm adjustments and reports the salt-corrected NN Tm at 5×SSCT. Users opt into urea or formamide corrections by passing `--buffer-preset hcr-5xssct-urea` (or `hcr-5xssc`). Individual flags (`--na-conc`, `--formamide-pct`, `--urea-M`, `--mg-conc`) gain explicit defaults (825 / 0 / 0 / 0) so they work standalone.
+
+Why: keeps default behaviour minimal and predictable. The tool no longer assumes which buffer you use, matching the philosophy of simpler community probe-design tools.
 
 ## What's new in v1.13.0
 
