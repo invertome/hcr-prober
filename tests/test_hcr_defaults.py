@@ -1,11 +1,10 @@
-"""Tests for HCR-aligned default values.
+"""Tests for default thermodynamic / buffer behaviour.
 
-Defaults model 5xSSCT + 4 M urea at 37 C (urea-HCR per Choi et al. 2018,
-Development 145:dev165753) — the buffer most contemporary HCR labs use,
-including this maintainer's. Reported Tm and dG must reflect those
-conditions or users will tune filters against numbers that don't
-correspond to their experimental reality. Formamide-HCR (5xSSC + 50%
-formamide) and PCR conditions remain available as alternate presets.
+Defaults make no denaturant assumptions: --buffer-preset is unset and
+formamide_pct / urea_M default to 0. Reported Tm is the salt-corrected
+nearest-neighbor Tm at 5xSSCT ionic strength (Na+ = 825 mM, Mg2+ = 0).
+Users opt into a buffer preset explicitly when they want urea or
+formamide corrections applied.
 """
 import argparse
 import pytest
@@ -24,8 +23,8 @@ def _build_design_parser():
 
 def test_na_conc_default_is_5xssc():
     """5xSSC(T) is approximately 825 mM Na+ (300 mM NaCl + 30 mM Na-citrate, 5x).
-    The default --buffer-preset is hcr-5xssct-urea, so after preset resolution
-    Na = 825."""
+    Even with no --buffer-preset the back-fill default puts Na at 825 mM —
+    that's the standard HCR ionic strength."""
     from hcr_prober.main import apply_buffer_preset
     p = _build_design_parser()
     args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1'])
@@ -89,21 +88,27 @@ def test_filter_by_structure_passes_ionic_strength_to_primer3(monkeypatch):
             )
 
 
-# --- Default preset: urea-HCR ------------------------------------------------
-def test_default_preset_is_urea_hcr():
-    """Default --buffer-preset is hcr-5xssct-urea (5xSSCT + 4 M urea, 37 C).
-    Resolves to Na=825 mM, formamide=0, urea_M=4."""
+# --- Default: no buffer preset, no denaturant adjustments --------------------
+def test_default_no_preset_no_denaturant():
+    """By default --buffer-preset is unset (None) and no denaturant
+    corrections are applied to Tm. Reported Tm is the salt-corrected NN
+    Tm at 5xSSCT. Users opt into a preset to add urea/formamide corrections."""
     from hcr_prober.main import apply_buffer_preset
     p = _build_design_parser()
     args = p.parse_args(['design', '-i', 'foo', '--amplifier', 'B1'])
+    assert args.buffer_preset is None, (
+        f'--buffer-preset default should be None (unset), '
+        f'got {args.buffer_preset!r}'
+    )
     apply_buffer_preset(args)
     assert args.na_conc == 825.0
+    assert args.mg_conc == 0.0
     assert args.formamide_pct == 0.0, (
-        f'Default --formamide-pct should resolve to 0 under urea preset, '
+        f'Default --formamide-pct should be 0 (no correction), '
         f'got {args.formamide_pct}'
     )
-    assert args.urea_M == 4.0, (
-        f'Default --urea-M should resolve to 4 (urea-HCR), got {args.urea_M}'
+    assert args.urea_M == 0.0, (
+        f'Default --urea-M should be 0 (no correction), got {args.urea_M}'
     )
 
 

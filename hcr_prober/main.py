@@ -15,18 +15,31 @@ BUFFER_PRESETS = {
     'hcr-5xssc':       {'na_conc': 825.0, 'mg_conc': 0.0, 'formamide_pct': 50.0, 'urea_M': 0.0},
     'pcr':             {'na_conc': 50.0,  'mg_conc': 0.0, 'formamide_pct': 0.0,  'urea_M': 0.0},
 }
-DEFAULT_BUFFER_PRESET = 'hcr-5xssct-urea'
+# Back-fill defaults applied when --buffer-preset is unset and individual
+# thermo flags are not provided. Models 5xSSCT ionic strength with no
+# denaturant corrections — the salt-corrected NN Tm is reported as-is.
+DEFAULT_THERMO = {'na_conc': 825.0, 'mg_conc': 0.0, 'formamide_pct': 0.0, 'urea_M': 0.0}
 
 
 def apply_buffer_preset(args):
-    """Fill in unset ionic-condition values from --buffer-preset.
+    """Resolve thermo flag values.
 
-    Individual flags (--na-conc, --mg-conc, --formamide-pct, --urea-M) win
-    over the preset; the preset only fills slots the user left at None.
+    1. If --buffer-preset is set, fill any None thermo slots from the
+       named preset.
+    2. Back-fill any remaining None slots from DEFAULT_THERMO (5xSSCT,
+       no denaturant) so the Tm reported is the salt-corrected NN Tm
+       with no further adjustment.
+
+    Explicit --na-conc / --mg-conc / --formamide-pct / --urea-M values
+    always win over both the preset and the back-fill default.
     """
-    preset_name = getattr(args, 'buffer_preset', DEFAULT_BUFFER_PRESET)
-    preset = BUFFER_PRESETS.get(preset_name, BUFFER_PRESETS[DEFAULT_BUFFER_PRESET])
-    for key, val in preset.items():
+    preset_name = getattr(args, 'buffer_preset', None)
+    if preset_name:
+        preset = BUFFER_PRESETS.get(preset_name, {})
+        for key, val in preset.items():
+            if getattr(args, key, None) is None:
+                setattr(args, key, val)
+    for key, val in DEFAULT_THERMO.items():
         if getattr(args, key, None) is None:
             setattr(args, key, val)
 
@@ -61,9 +74,10 @@ def add_shared_design_args(parser):
     proc_group.add_argument('--dry-run', action='store_true', help='Run the thermo / GC / Tm / structure filters and report the funnel without invoking BLAST.')
     proc_group.add_argument('--verbose', action='store_true', help='Log at DEBUG level.')
     proc_group.add_argument('--quiet', action='store_true', help='Log at WARNING level only.')
-    proc_group.add_argument('--buffer-preset', choices=list(BUFFER_PRESETS.keys()), default=DEFAULT_BUFFER_PRESET,
-                            help='Convenience: sets na/mg/formamide/urea together. Explicit flags override. '
-                                 'Default hcr-5xssct-urea = urea-HCR (Choi 2018).')
+    proc_group.add_argument('--buffer-preset', choices=list(BUFFER_PRESETS.keys()), default=None,
+                            help='Optional convenience preset that sets na/mg/formamide/urea together. '
+                                 'Unset by default — no denaturant corrections applied; reported Tm is '
+                                 'the salt-corrected NN Tm at 5xSSCT. Explicit flags override the preset.')
     design_group.add_argument('--amplifier', nargs='+', required=True, help='One or more HCR amplifier IDs.')
     design_group.add_argument('--max-probes', type=int, default=33, help='Maximum number of probe pairs to select.')
     design_group.add_argument('--skip-5prime', type=int, default=50, help='Nucleotides to exclude at the 5\' end.')
@@ -76,12 +90,12 @@ def add_shared_design_args(parser):
     thermo_group.add_argument('--max-tm', type=float, default=None,
                               help='Optional upper Tm bound (C, post-correction). Off by default.')
     thermo_group.add_argument('--max-homopolymer', type=int, default=4); thermo_group.add_argument('--max-gc-diff', type=float, default=15.0)
-    thermo_group.add_argument('--na-conc', type=float, default=None, help='Na+ concentration in mM. Defaults from --buffer-preset (hcr-5xssct-urea/hcr-5xssc=825, pcr=50).')
-    thermo_group.add_argument('--mg-conc', type=float, default=None, help='Mg2+ concentration in mM. Defaults from --buffer-preset.')
+    thermo_group.add_argument('--na-conc', type=float, default=None, help='Na+ concentration in mM. Default 825 (5xSSCT); --buffer-preset pcr sets to 50.')
+    thermo_group.add_argument('--mg-conc', type=float, default=None, help='Mg2+ concentration in mM. Default 0.')
     thermo_group.add_argument('--dntp-conc', type=float, default=0.0, help='dNTP concentration in mM.')
     thermo_group.add_argument('--dna-conc', type=float, default=25.0, help='DNA oligo concentration in nM.')
-    thermo_group.add_argument('--formamide-pct', type=float, default=None, help='Formamide percent in hyb buffer. Defaults from --buffer-preset (hcr-5xssc=50, others=0). Tm correction: -0.65 C / %.')
-    thermo_group.add_argument('--urea-M', type=float, default=None, help='Urea molarity in hyb buffer. Defaults from --buffer-preset (hcr-5xssct-urea=4, others=0). Tm correction: -2.25 C / M.')
+    thermo_group.add_argument('--formamide-pct', type=float, default=None, help='Formamide percent in hyb buffer. Default 0 (no correction). --buffer-preset hcr-5xssc sets to 50. Tm correction: -0.65 C / %.')
+    thermo_group.add_argument('--urea-M', type=float, default=None, help='Urea molarity in hyb buffer. Default 0 (no correction). --buffer-preset hcr-5xssct-urea sets to 4. Tm correction: -2.25 C / M.')
     thermo_group.add_argument('--max-tm-sigma', type=float, default=None, help='Optional: enforce sigma(Tm) <= N (Celsius) across the selected probe set by removing extreme-Tm probes.')
     thermo_group.add_argument('--max-hairpin-dg', type=float, default=-3.0, help='Max hairpin delta-G (kcal/mol).')
     thermo_group.add_argument('--max-homodimer-dg', type=float, default=-5.0, help='Max homodimer delta-G (kcal/mol).')
