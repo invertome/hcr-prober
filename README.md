@@ -1,4 +1,4 @@
-# HCR-prober v1.12.0
+# HCR-prober v1.13.0
 
 A command-line pipeline for designing DNA probes for third-generation *in situ* Hybridization Chain Reaction (HCR v3.0). Given an mRNA target, hcr-prober produces an order-ready set of split-initiator probe pairs that tile the transcript, with optional BLAST-based specificity screening, secondary-structure filtering, and a fully reproducible audit trail.
 
@@ -17,7 +17,7 @@ Designed for molecular biologists working with model and non-model organisms, in
 7. [Examples](#examples)
 8. [Reproducibility](#reproducibility)
 9. [Amplifier sources](#amplifier-sources)
-10. [What's new in v1.12.0](#whats-new-in-v1120)
+10. [What's new in v1.13.0](#whats-new-in-v1130)
 
 ---
 
@@ -47,7 +47,7 @@ hcr-prober swap \
     --new-amplifier B5
 ```
 
-Defaults reflect HCR hybridisation conditions (5×SSC + 50 % formamide at 37 °C). For PCR conditions, pass `--buffer-preset pcr`.
+Defaults reflect contemporary urea-HCR conditions (5×SSCT + 4 M urea at 37 °C, per Choi et al. 2018). The Tm filter is **off by default** — pass `--min-tm` / `--max-tm` to opt in. For formamide HCR pass `--buffer-preset hcr-5xssc`; for PCR conditions pass `--buffer-preset pcr`.
 
 ---
 
@@ -95,7 +95,7 @@ For each input transcript, the `design` command runs the following filtering fun
 | 5 | Region/sequence masking | Optional: mask user-specified intervals (`--mask-regions`) or sequences (`--mask-sequences`). |
 | 6 | Homopolymer filter | Reject windows containing runs of ≥ `--max-homopolymer + 1` of the same base (default rejects runs ≥ 5). |
 | 7 | Per-arm GC filter | Both 25-nt arms must independently fall inside `[--min-gc, --max-gc]` AND differ by no more than `--max-gc-diff`. |
-| 8 | Tm filter | Both arms must have a (formamide-corrected) Tm inside `[--min-tm, --max-tm]`. |
+| 8 | Tm filter | **Off by default** — pass `--min-tm` / `--max-tm` to opt in. When enabled, both arms must have a (denaturant-corrected) Tm inside the window. |
 | 9 | Secondary-structure filter | primer3-py rejects arms that form stable hairpins or homodimers, or pairs that form stable heterodimers, at the configured ionic conditions and 37 °C. |
 | 10 | Specificity (BLAST) | Each candidate's joined 25+NN+25 sequence is BLASTed against `--blast-ref`. The 2-nt `NN` gap is intentional: HCR signal requires *both* arms to bind in close proximity, so a query that scores as a 52-mer enforces co-localisation. The query is searched on the reverse-complement strand (`-strand minus`) since probes are antisense to mRNA. |
 | 11 | Selection strategy | One of `any-strong-hit`, `best-coverage`, `specific-id` (see below). |
@@ -151,19 +151,20 @@ Design probes against one or more transcripts.
 |------|---------|-------|
 | `--min-gc` / `--max-gc` | `40` / `60` (%) | **Per-arm** GC range. |
 | `--max-gc-diff` | `15` (%) | Maximum GC % difference between the two arms. |
-| `--min-tm` / `--max-tm` | `40` / `55` (°C) | Per-arm Tm range, **after formamide correction**. |
+| `--min-tm` / `--max-tm` | off / off (°C) | Per-arm Tm range, **after denaturant correction**. Off by default; pass either bound to enable filtering. Typical urea-HCR window: `--min-tm 60 --max-tm 75`. |
 | `--max-homopolymer N` | `4` | Reject windows with runs ≥ N+1 of any base. |
 | `--max-tm-sigma N` | off | Optional: enforce σ(Tm) ≤ N across the final pool. |
 
 #### Hybridization buffer
 | Flag | Default | Notes |
 |------|---------|-------|
-| `--buffer-preset {hcr-5xssc, pcr}` | `hcr-5xssc` | Convenience: sets Na+, Mg²⁺, formamide together. |
-| `--na-conc` | preset (825 / 50 mM) | Sodium concentration, mM. 5×SSC ≈ 825 mM Na⁺. |
+| `--buffer-preset {hcr-5xssct-urea, hcr-5xssc, pcr}` | `hcr-5xssct-urea` | Convenience: sets Na+, Mg²⁺, formamide, urea together. |
+| `--na-conc` | preset (825 / 50 mM) | Sodium concentration, mM. 5×SSC(T) ≈ 825 mM Na⁺. |
 | `--mg-conc` | preset (0 mM) | Magnesium concentration, mM. |
 | `--dntp-conc` | `0` mM | dNTP concentration. |
 | `--dna-conc` | `25` nM | Probe oligo concentration. |
-| `--formamide-pct` | preset (50 / 0 %) | Formamide percentage. Tm is reduced by 0.65 °C per percent. |
+| `--formamide-pct` | preset (`hcr-5xssc`=50 %, others=0 %) | Formamide percent in hyb buffer. Tm is reduced by 0.65 °C per percent. |
+| `--urea-M` | preset (`hcr-5xssct-urea`=4 M, others=0 M) | Urea molarity in hyb buffer. Tm is reduced by 2.25 °C per molar. |
 
 #### Secondary structure
 | Flag | Default | Notes |
@@ -172,7 +173,7 @@ Design probes against one or more transcripts.
 | `--max-homodimer-dg` | `-5.0` (kcal/mol) | Reject arm if homodimer ΔG is more negative. |
 | `--max-heterodimer-dg` | `-5.0` (kcal/mol) | Reject pair if cross-arm heterodimer ΔG is more negative. |
 
-All three values are evaluated under the same Na⁺/Mg²⁺/formamide conditions as the Tm filter.
+All three values are evaluated under the same Na⁺/Mg²⁺/formamide/urea conditions as the Tm filter.
 
 #### BLAST specificity
 | Flag | Default | Notes |
@@ -222,11 +223,23 @@ Sequences are validated by length (handle + spacer + 25-nt arm) before stripping
 
 ## Hybridization buffer conditions
 
-HCR v3.0 hybridizes in **5×SSC + 50 % formamide at 37 °C**. Reported Tm and ΔG values reflect those conditions by default, so the `--min-tm`/`--max-tm` range you set is the Tm your probes will actually see in the assay.
+HCR v3.0 is most commonly run today in **5×SSCT + 4 M urea at 37 °C** (Choi et al. 2018, *Development* 145:dev165753). Urea HCR has the practical advantages of avoiding formamide handling and being cheaper to ship at scale; the original formamide protocol (5×SSC + 50 % formamide) remains in use too. Both are supported, plus PCR-style conditions if you're using this tool to design DNA primers/probes for a non-HCR assay.
 
-If you want to tune in PCR conditions (50 mM Na⁺, no formamide) — for example to reproduce values from a primer-design tool — pass `--buffer-preset pcr`. You can also override individual values; explicit flags win over the preset.
+| `--buffer-preset` | Na⁺ | Mg²⁺ | Formamide | Urea | When to use |
+|---|---|---|---|---|---|
+| `hcr-5xssct-urea` *(default)* | 825 mM | 0 mM | 0 % | 4 M | Urea HCR (Choi 2018, contemporary practice) |
+| `hcr-5xssc` | 825 mM | 0 mM | 50 % | 0 M | Original formamide HCR (Choi 2014, 2018) |
+| `pcr` | 50 mM | 0 mM | 0 % | 0 M | DNA primers/probes for PCR-style assays |
 
-The Tm correction uses the standard empirical coefficient `Tm_actual = Tm_NN(salt-corrected) − 0.65 × formamide_pct` (Casey & Davidson 1977; McConaughy et al. 1969).
+Reported Tm and ΔG values reflect the active preset, so the numbers in the summary file are the Tm your probes actually see in the assay. **The Tm-window filter is off by default** — most contemporary HCR practice does not enforce a Tm window, since HCR's split-initiator architecture is tolerant within standard GC and homopolymer constraints. Pass `--min-tm` / `--max-tm` to opt in; for the urea preset a typical window is 60–75 °C, for the formamide preset 40–55 °C.
+
+The Tm correction is
+
+```
+Tm_actual = Tm_NN(salt-corrected) − 0.65 × formamide_pct − 2.25 × urea_M
+```
+
+(Casey & Davidson 1977; McConaughy et al. 1969 for formamide; Hutton 1977 for urea. The two corrections are independent and additive.)
 
 ---
 
@@ -259,7 +272,7 @@ A reference transcriptome is optional but strongly recommended: without `--blast
 
 ### 1. Default HCR run with BLAST screen
 
-The most common scenario: you have one mRNA target, you want a tilable set of probe pairs that work under standard HCR v3.0 conditions (5×SSC + 50 % formamide + 37 °C), and you have a transcriptome to screen against.
+The most common scenario: you have one mRNA target, you want a tilable set of probe pairs that work under standard urea-HCR conditions (5×SSCT + 4 M urea + 37 °C), and you have a transcriptome to screen against.
 
 ```bash
 hcr-prober design \
@@ -329,19 +342,33 @@ If a region is too short for any valid 52 nt window (for example, a unique stret
 
 ### 4. Tight Tm uniformity for multiplex experiments
 
-When you pool probes from many genes into one hybridization, every probe needs to anneal at the same temperature. The default Tm window of 40–55 °C is wide on purpose; if your protocol assumes a single hybridization Tm across genes, you want a tighter spread.
+When you pool probes from many genes into one hybridization, every probe needs to anneal at the same temperature. The Tm filter is off by default; pass `--min-tm` / `--max-tm` to opt into a window. If your protocol assumes a single hybridization Tm across genes, you also want a tighter spread.
+
+```bash
+# urea HCR (default preset): typical window is 60-75 C
+hcr-prober design \
+    -i MyGene.fasta \
+    --amplifier B1 \
+    --blast-ref host_transcriptome.fasta \
+    --min-tm 64 --max-tm 70 \
+    --max-tm-sigma 1.0 \
+    -o probes/
+```
+
+`--min-tm` / `--max-tm` define the per-probe Tm window (under whichever buffer preset is active). `--max-tm-sigma 1.0` adds a *post-selection* step: after the normal pipeline has chosen its set, hcr-prober drops the probe with the most extreme Tm, recomputes σ(Tm), and repeats until either σ ≤ 1.0 °C or fewer than four probes remain. The summary file logs how many probes were peeled and the final σ.
+
+For formamide-HCR users, the equivalent window is ~23 °C lower (the formamide correction subtracts 32.5 °C vs urea's 9 °C):
 
 ```bash
 hcr-prober design \
     -i MyGene.fasta \
     --amplifier B1 \
+    --buffer-preset hcr-5xssc \
     --blast-ref host_transcriptome.fasta \
     --min-tm 42 --max-tm 50 \
     --max-tm-sigma 1.0 \
     -o probes/
 ```
-
-`--min-tm` / `--max-tm` shrink the per-probe Tm window. `--max-tm-sigma 1.0` adds a *post-selection* step: after the normal pipeline has chosen its set, hcr-prober drops the probe with the most extreme Tm, recomputes σ(Tm), and repeats until either σ ≤ 1.0 °C or fewer than four probes remain. The summary file logs how many probes were peeled and the final σ.
 
 Trade-off: tighter σ usually means fewer probes. If `--max-probes 33` was already hit before this filter, expect to lose several here.
 
@@ -429,6 +456,34 @@ The package ships with two JSON files defining HCR v3.0 split-initiator handles:
 - `hcr_prober/config/amplifiers/HCR_v3_Wang_2020.json` — **B7, B9**, attributed to Wang et al. 2020. **These have not yet been independently cross-checked against the Wang 2020 supplement** in the current release; treat as plausible-but-unverified until you confirm against the source.
 
 Each amplifier entry carries a `_source` field with its citation. Adding a new amplifier is a matter of dropping in another JSON file with `up`, `dn`, `upspc`, `dnspc`, and `_source` — no code change required.
+
+---
+
+## What's new in v1.13.0
+
+Default behaviour now reflects contemporary urea-HCR practice (Choi et al. 2018) rather than the older formamide protocol, and the Tm filter is opt-in instead of always-on. Both changes align hcr-prober with how most HCR labs actually run experiments today.
+
+**Default changes (behaviour-affecting)**
+- New default `--buffer-preset hcr-5xssct-urea` (5×SSCT + 4 M urea, 37 °C). Reported Tm and ΔG values now reflect urea-HCR conditions out of the box.
+- `--min-tm` and `--max-tm` default to **off**. Pass either bound to opt into Tm-window filtering. Other filters (GC, homopolymer, secondary structure, BLAST) are unchanged.
+
+**New flags & options**
+- `--urea-M` (default from preset) — urea molarity, with empirical Tm correction of −2.25 °C / M (Hutton 1977).
+- New buffer preset `hcr-5xssct-urea`. The previous default `hcr-5xssc` (50 % formamide) and `pcr` remain as alternates.
+
+**Migration**
+
+| You want                                          | Add to your command                                                |
+|---------------------------------------------------|--------------------------------------------------------------------|
+| v1.12.0 reporting **and** filtering               | `--buffer-preset hcr-5xssc --min-tm 40 --max-tm 55`                |
+| v1.12.0 filter only, with v1.13.0 urea reporting  | `--min-tm 60 --max-tm 75` (urea-corrected equivalent of 40–55 °C)  |
+| Stay with formamide reporting, no Tm filter       | `--buffer-preset hcr-5xssc`                                        |
+
+The 23.5 °C offset between the two windows comes directly from the difference in denaturant correction (50 × 0.65 = 32.5 °C for 50 % formamide, vs. 4 × 2.25 = 9 °C for 4 M urea).
+
+**Documentation**
+- Hyb-conditions section rewritten around urea-HCR with formamide as alternate.
+- Tm correction now: `Tm_actual = Tm_NN(salt-corrected) − 0.65 × formamide_pct − 2.25 × urea_M` (corrections are independent and additive).
 
 ---
 
