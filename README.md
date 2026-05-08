@@ -1,4 +1,4 @@
-# HCR-prober v1.13.1
+# HCR-prober v1.13.2
 
 A command-line pipeline for designing DNA probes for third-generation *in situ* Hybridization Chain Reaction (HCR v3.0). Given an mRNA target, hcr-prober produces an order-ready set of split-initiator probe pairs that tile the transcript, with optional BLAST-based specificity screening, secondary-structure filtering, and a fully reproducible audit trail.
 
@@ -17,7 +17,7 @@ Designed for molecular biologists working with model and non-model organisms, in
 7. [Examples](#examples)
 8. [Reproducibility](#reproducibility)
 9. [Amplifier sources](#amplifier-sources)
-10. [What's new in v1.13.1](#whats-new-in-v1131)
+10. [What's new in v1.13.2](#whats-new-in-v1132)
 
 ---
 
@@ -461,6 +461,10 @@ The package ships with two JSON files defining HCR v3.0 split-initiator handles:
 Each amplifier entry carries a `_source` field with its citation. Adding a new amplifier is a matter of dropping in another JSON file with `up`, `dn`, `upspc`, `dnspc`, and `_source` — no code change required.
 
 ---
+
+## What's new in v1.13.2
+
+Bug fix: `hcr-prober design -h` and `hcr-prober isoform-split -h` errored out with `ValueError: unsupported format character` because a literal `%` in the `--formamide-pct` help string collided with argparse's printf-style help-string interpolation. The `%` is now properly escaped (`%%`) so subcommand help renders cleanly. New regression test in `test_integration.py` invokes `-h` for every subcommand.
 
 ## What's new in v1.13.1
 
