@@ -10,7 +10,7 @@ def group_sequences_by_prefix(sequences, delimiter='_'):
         prefix = seq_id.split(delimiter)[0]
         if prefix not in groups: groups[prefix] = {}
         groups[prefix][seq_id] = sequence
-    logger.info(f'Identified {len(groups)} gene group(s): {', '.join(groups.keys())}')
+    logger.info(f"Identified {len(groups)} gene group(s): {', '.join(groups.keys())}")
     return groups
 
 def merge_intervals(intervals):

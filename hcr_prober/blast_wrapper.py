@@ -41,7 +41,7 @@ def _run_blast(probes, db_name, temp_dir, extra_args):
     """
     if not probes: return None
     with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.fasta', dir=temp_dir) as f:
-        for p in probes: f.write(f'>{p['pair_id']}\n{p['probe_dn_target']}NN{p['probe_up_target']}\n')
+        for p in probes: f.write(f">{p['pair_id']}\n{p['probe_dn_target']}NN{p['probe_up_target']}\n")
         query_path = f.name
     blast_out_path = f'{query_path}.blast.tsv'
     cmd = ['blastn', '-query', query_path, '-db', db_name, '-out', blast_out_path, '-outfmt', '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore', '-task', 'blastn-short', '-strand', 'minus']
@@ -88,7 +88,9 @@ def filter_probes_by_blast(probes, args, temp_dir):
         else:
             ranked_transcripts = sorted(transcript_scores, key=lambda x: (x['breadth'], x['quality']), reverse=True)
             best_transcript_id = ranked_transcripts[0]['id']
-            logger.info(f'Identified "{best_transcript_id}" as best-supported transcript (Breadth: {ranked_transcripts[0]['breadth']}, Avg. Quality: {ranked_transcripts[0]['quality']:.2f}).')
+            breadth = ranked_transcripts[0]['breadth']
+            quality = ranked_transcripts[0]['quality']
+            logger.info(f'Identified "{best_transcript_id}" as best-supported transcript (Breadth: {breadth}, Avg. Quality: {quality:.2f}).')
             strong_hits = plausible_hits[plausible_hits['bitscore'] >= args.min_bitscore]
             hits_on_best = strong_hits[strong_hits['hit_id'] == best_transcript_id]
             probes_on_best = set(hits_on_best['pair_id'])

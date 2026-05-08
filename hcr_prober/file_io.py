@@ -76,7 +76,7 @@ def load_amplifiers(pkg_path):
             if raw:
                 data[key] = su.resolve_iupac_spacer(raw)
     if amplifiers:
-        logger.info(f'Loaded {len(amplifiers)} amplifiers: {', '.join(amplifiers.keys())}')
+        logger.info(f"Loaded {len(amplifiers)} amplifiers: {', '.join(amplifiers.keys())}")
     else:
         logger.error('No amplifiers were loaded.')
     return amplifiers
@@ -134,7 +134,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
     amp_dir = os.path.join(args.output_dir, gene_name, amplifier)
     os.makedirs(amp_dir, exist_ok=True)
     with open(os.path.join(amp_dir, f'{gene_name}_{amplifier}_summary.txt'), 'w') as f:
-        f.write(f'HCR-prober v{__version__} Summary for: {gene_name} | Amplifier: {amplifier}\n{'='*70}\n')
+        f.write(f"HCR-prober v{__version__} Summary for: {gene_name} | Amplifier: {amplifier}\n{'='*70}\n")
         if not probes: f.write('\n*** PIPELINE FAILED TO PRODUCE ANY FINAL PROBES ***\n')
         f.write(_provenance_block(args))
         f.write('\n--- Run Parameters ---\n')
@@ -178,7 +178,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
             order_data['Pool name'].extend([pool_name, pool_name]); order_data['Sequence'].extend([p['probe_dn_final'], p['probe_up_final']])
         pd.DataFrame(order_data).to_excel(os.path.join(amp_dir, f'{gene_name}_{amplifier}_order.xlsx'), index=False)
         with open(os.path.join(amp_dir, f'{gene_name}_{amplifier}_probes.fasta'), 'w') as f:
-            for p in sorted(probes, key=lambda x: x['pair_num']): f.write(f'>{p['pair_id']}_A\n{p['probe_dn_final']}\n>{p['pair_id']}_B\n{p['probe_up_final']}\n')
+            for p in sorted(probes, key=lambda x: x['pair_num']): f.write(f">{p['pair_id']}_A\n{p['probe_dn_final']}\n>{p['pair_id']}_B\n{p['probe_up_final']}\n")
         visualization.generate_svg_probe_map(probes, len(sequence), amplifier, gene_name, os.path.join(amp_dir, f'{gene_name}_{amplifier}_probe_map.svg'), window_size=getattr(args, 'window_size', 52))
         write_details_csv(probes, os.path.join(amp_dir, f'{gene_name}_{amplifier}_details.csv'))
     else: logger.warning(f'No final probes for {gene_name} with amplifier {amplifier}. Report created.')
