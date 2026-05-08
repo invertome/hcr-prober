@@ -54,12 +54,19 @@ def generate_thermo_candidates(sequence, args):
     dntps = getattr(args, 'dntp_conc', 0)
     dnac = getattr(args, 'dna_conc', 25)
     formamide = getattr(args, 'formamide_pct', 0.0)
+    urea = getattr(args, 'urea_M', 0.0)
+    min_tm = getattr(args, 'min_tm', None)
+    max_tm = getattr(args, 'max_tm', None)
     for w in balanced_gc_passed:
-        tm1 = tu.calculate_tm(w['probe_dn_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps, formamide_pct=formamide)
-        tm2 = tu.calculate_tm(w['probe_up_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps, formamide_pct=formamide)
-        if args.min_tm <= tm1 <= args.max_tm and args.min_tm <= tm2 <= args.max_tm:
-            w['tm_dn'], w['tm_up'] = tm1, tm2
-            tm_passed.append(w)
+        tm1 = tu.calculate_tm(w['probe_dn_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps, formamide_pct=formamide, urea_M=urea)
+        tm2 = tu.calculate_tm(w['probe_up_target'], dnac1=dnac, dnac2=dnac, Na=na, Mg=mg, dNTPs=dntps, formamide_pct=formamide, urea_M=urea)
+        # Tm window filter: each bound applied only when set. Both None = filter off.
+        if min_tm is not None and (tm1 < min_tm or tm2 < min_tm):
+            continue
+        if max_tm is not None and (tm1 > max_tm or tm2 > max_tm):
+            continue
+        w['tm_dn'], w['tm_up'] = tm1, tm2
+        tm_passed.append(w)
     audit['after_tm_filter'] = len(tm_passed)
     if hasattr(args, 'max_hairpin_dg'):
         tm_passed = filter_by_structure(tm_passed, args)

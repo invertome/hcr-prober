@@ -86,6 +86,35 @@ def load_config(config_path):
         with open(config_path, 'r') as f: return yaml.safe_load(f) or {}
     return {}
 
+def _thermo_params_block(args):
+    """Format the thermodynamic-parameters block of the run summary.
+
+    Reports Na+/Mg2+/dNTP/DNA concentrations, formamide and urea
+    (whichever the active buffer preset specifies), GC range, and the
+    Tm filter window. When --min-tm/--max-tm are both None the Tm filter
+    line reads "Tm filter: off" so the audit trail is unambiguous.
+    """
+    na = getattr(args, 'na_conc', 825)
+    mg = getattr(args, 'mg_conc', 0)
+    dntps = getattr(args, 'dntp_conc', 0)
+    dna = getattr(args, 'dna_conc', 25)
+    formamide = getattr(args, 'formamide_pct', 0.0)
+    urea = getattr(args, 'urea_M', 0.0)
+    min_tm = getattr(args, 'min_tm', None)
+    max_tm = getattr(args, 'max_tm', None)
+    lines = []
+    lines.append(f'  GC Range: {args.min_gc}-{args.max_gc} %')
+    if min_tm is None and max_tm is None:
+        lines.append('  Tm filter: off (pass --min-tm/--max-tm to enable)')
+    else:
+        lo = '-inf' if min_tm is None else f'{min_tm}'
+        hi = '+inf' if max_tm is None else f'{max_tm}'
+        lines.append(f'  Tm Range: {lo}-{hi} C')
+    lines.append(f'  Na+ conc: {na} mM | Mg2+ conc: {mg} mM | dNTP conc: {dntps} mM | DNA conc: {dna} nM')
+    lines.append(f'  Formamide: {formamide} % | Urea: {urea} M')
+    return '\n'.join(lines) + '\n'
+
+
 def write_details_csv(probes, csv_path):
     """Write detailed thermodynamic CSV for each probe pair."""
     columns = [
@@ -111,13 +140,7 @@ def write_outputs(probes, sequence, gene_name, amplifier, args, blast_reports, a
         f.write('\n--- Run Parameters ---\n')
         f.write(f'  Target Sequence Length: {len(sequence)} nt\n')
         f.write(f'  Min Probe Distance: {args.min_probe_distance} nt\n')
-        f.write(f'  GC Range: {args.min_gc}-{args.max_gc} %\n')
-        f.write(f'  Tm Range: {args.min_tm}-{args.max_tm} C\n')
-        na = getattr(args, 'na_conc', 825)
-        mg = getattr(args, 'mg_conc', 0)
-        dntps = getattr(args, 'dntp_conc', 0)
-        dna = getattr(args, 'dna_conc', 25)
-        f.write(f'  Na+ conc: {na} mM | Mg2+ conc: {mg} mM | dNTP conc: {dntps} mM | DNA conc: {dna} nM\n')
+        f.write(_thermo_params_block(args))
         if args.blast_ref:
             f.write(f'  BLAST Reference: {os.path.basename(args.blast_ref)}\n')
             f.write(f'  Discovery Bitscore Cutoff: {args.min_bitscore}\n')
