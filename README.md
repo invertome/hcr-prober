@@ -1,4 +1,4 @@
-# HCR-prober v1.13.2
+# HCR-prober v1.13.3
 
 A command-line pipeline for designing DNA probes for third-generation *in situ* Hybridization Chain Reaction (HCR v3.0). Given an mRNA target, hcr-prober produces an order-ready set of split-initiator probe pairs that tile the transcript, with optional BLAST-based specificity screening, secondary-structure filtering, and a fully reproducible audit trail.
 
@@ -17,7 +17,7 @@ Designed for molecular biologists working with model and non-model organisms, in
 7. [Examples](#examples)
 8. [Reproducibility](#reproducibility)
 9. [Amplifier sources](#amplifier-sources)
-10. [What's new in v1.13.2](#whats-new-in-v1132)
+10. [What's new in v1.13.3](#whats-new-in-v1133)
 
 ---
 
@@ -461,6 +461,10 @@ The package ships with two JSON files defining HCR v3.0 split-initiator handles:
 Each amplifier entry carries a `_source` field with its citation. Adding a new amplifier is a matter of dropping in another JSON file with `up`, `dn`, `upspc`, `dnspc`, and `_source` — no code change required.
 
 ---
+
+## What's new in v1.13.3
+
+Bug fix: hcr-prober failed to import at all on Python 3.8–3.11 with `SyntaxError: f-string: expecting '}'`. Six f-strings in `file_io.py`, `isoform_analyzer.py`, and `blast_wrapper.py` reused the same quote character for the outer string and an inner expression — a syntax that PEP 701 only legalised in Python 3.12+. setup.py declares `python_requires>=3.8`, so the code must remain parseable on 3.8–3.11. Each offending f-string was rewritten by switching the outer quote (or pre-computing the inner expression). New static-analysis test `test_python_compat.py` scans every shipped `.py` file for the same-quote-nested pattern and fails if any are reintroduced.
 
 ## What's new in v1.13.2
 
